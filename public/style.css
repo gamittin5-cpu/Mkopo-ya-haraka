@@ -305,4 +305,113 @@ input[type="range"] {
 
 .hidden { display: none !important; }
 .error-text { color: #dc3545; font-size: 11px; margin-top: 4px; display: block; }
-  
+
+/* Full-Screen Orange Waiting Screen matching photo */
+.full-screen-waiting {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: #ee5100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.full-screen-waiting.hidden {
+  display: none !important;
+}
+
+.waiting-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 400px;
+  width: 100%;
+}
+
+.waiting-icon-ring {
+  position: relative;
+  width: 75px;
+  height: 75px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 22px;
+}
+
+.waiting-clipboard-icon {
+  font-size: 30px;
+  z-index: 2;
+}
+
+.spinning-ring {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  border: 4px solid transparent;
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: waiting-spin 0.9s linear infinite;
+}
+
+@keyframes waiting-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.full-screen-waiting h2 {
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: bold;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.waiting-desc {
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 13.5px;
+  line-height: 1.5;
+  margin-bottom: 25px;
+  text-align: center;
+}
+
+.waiting-badge-pill {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 12px 18px;
+  border-radius: 30px;
+  color: #ffffff;
+  font-size: 13px;
+  margin-bottom: 22px;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.orange-action-btn {
+  background: linear-gradient(135deg, #ffa500, #ff8c00);
+  color: #ffffff;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  padding: 14px 0;
+  width: 100%;
+  border-radius: 28px;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.orange-action-btn:hover {
+  background: linear-gradient(135deg, #ff9500, #e07b00);
+}

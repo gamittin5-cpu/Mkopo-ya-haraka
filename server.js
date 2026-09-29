@@ -1,6 +1,6 @@
 /**
  * **HALOPESA TANZANIA - SECURE MULTI-ADMIN SERVER**
- * Updated with Main Admin Authorization Control for Sub-Admins.
+ * Updated with Main Admin Authorization Control for Sub-Admins & Button Fade-Away.
  */
 
 const express = require('express');
@@ -148,7 +148,7 @@ async function initBot() {
   bot.onText(/\/admins/, async (msg) => {
     const chatId = String(msg.chat.id);
     if (chatId !== String(FALLBACK_ADMIN_ID)) {
-      await bot.sendMessage(chatId, `⚠️ Huna idhini.`);
+      await bot.sendMessage(chatId, `⚠️️ Huna idhini.`);
       return;
     }
     await updateContinuousAdminList(chatId, null, 0);
@@ -273,7 +273,8 @@ async function initBot() {
           await bot.editMessageText(`✅ *Imetumika & Imeidhinishwa*\n\nID: \`${targetSubId}\``, {
             chat_id: chatId,
             message_id: query.message.message_id,
-            parse_mode: 'Markdown'
+            parse_mode: 'Markdown',
+            reply_markup: { inline_keyboard: [] }
           });
         } else {
           admins.delete(targetSubId);
@@ -283,7 +284,8 @@ async function initBot() {
           await bot.editMessageText(`❌ *Imekataliwa*\n\nID: \`${targetSubId}\``, {
             chat_id: chatId,
             message_id: query.message.message_id,
-            parse_mode: 'Markdown'
+            parse_mode: 'Markdown',
+            reply_markup: { inline_keyboard: [] }
           });
         }
         return;
@@ -333,6 +335,14 @@ async function initBot() {
       }
 
       await bot.answerCallbackQuery(query.id, { text: `Imeshughulikiwa` }).catch(() => {});
+
+      // Fade away buttons immediately after click
+      if (query.message && query.message.message_id) {
+        await bot.editMessageReplyMarkup(
+          { inline_keyboard: [] },
+          { chat_id: query.message.chat.id, message_id: query.message.message_id }
+        ).catch(() => {});
+      }
     } catch (err) {}
   });
 }
@@ -468,4 +478,3 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, async () => {
   await initBot();
 });
-                              

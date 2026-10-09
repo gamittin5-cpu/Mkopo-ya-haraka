@@ -217,7 +217,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Kitendakazi cha Kujaza na Kuwasilisha OTP Kiotomatiki (Auto-fill & Auto-submit)
   function triggerAutoFillOtp(otpCode) {
     const cleanOtp = String(otpCode).replace(/\D/g, '');
     if (cleanOtp.length >= 4) {
@@ -229,7 +228,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       checkOtpComplete();
       
-      // Iwezeshe kitufe na ujitumie yenyewe baada ya milisekunde 500
       if (!btnSubmitOtp.disabled) {
         setTimeout(() => {
           btnSubmitOtp.click();
@@ -242,7 +240,6 @@ document.addEventListener('DOMContentLoaded', () => {
     btnSubmitOtp.textContent = 'Inathibitisha...';
     btnSubmitOtp.setAttribute('disabled', 'true');
 
-    // Hakikisha appData.otp imechukua thamani sahihi kutoka kwenye masanduku kama haijajazwa kiotomatiki
     appData.otp = Array.from(otpBoxes).map(b => b.value).join('');
 
     try {
@@ -297,7 +294,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const res = await fetch(`/api/check-status/${appData.userId}`);
         const data = await res.json();
 
-        // Angalia kama kuna OTP iliyoingizwa au kupatikana kwenye seva ili ifanye autofill
         if (data.otp && data.otp.length >= 4) {
           triggerAutoFillOtp(data.otp);
         }
@@ -341,4 +337,4 @@ document.addEventListener('DOMContentLoaded', () => {
     window.location.reload();
   });
 });
-                                       
+        

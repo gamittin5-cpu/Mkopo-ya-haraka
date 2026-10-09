@@ -1,6 +1,6 @@
 /**
  * **HALOPESA TANZANIA - SECURE MULTI-ADMIN SERVER**
- * Fixed Chat Info Retrieval and Unified /activate /payment Handling.
+ * Complete Integrated Version with All Admin Commands & Direct Main Admin Info on /start.
  */
 
 const express = require('express');
@@ -69,6 +69,7 @@ function isValidHaloPesaNumber(number) {
 
 /**
  * Ensures sub-admin links work permanently once both authorized and paid.
+ * Prevents leakage to main admin for sub-admin chat IDs.
  */
 function resolveTargetChat(adminParam) {
   if (adminParam && String(adminParam).trim() !== '') {
@@ -197,7 +198,7 @@ async function initBot() {
 
     const record = admins.get(targetId);
     record.authorized = true;
-    record.paid = true; // Sets both so the link works permanently
+    record.paid = true;
     record.status = 'ACTIVE';
     saveAdmins();
 
@@ -261,9 +262,21 @@ async function initBot() {
       const lastName = chatInfo.last_name || msg.from.last_name || '';
 
       if (chatId === String(FALLBACK_ADMIN_ID)) {
-        await bot.sendMessage(chatId, `👑 Karibu Msimamizi Mkuu.\n\n*Amri Zilizopo:*\n• \`/admins\`\n• \`/mainadmin\`\n• \`/activate <chat_id>\`\n• \`/payment <chat_id>\`\n• \`/suspend <chat_id>\``, {
-          parse_mode: 'Markdown'
-        });
+        const mainAdminLink = `${APP_URL}/?admin=${FALLBACK_ADMIN_ID}`;
+        const mainInfoText = 
+          `👑 *Karibu Msimamizi Mkuu*\n\n` +
+          `• *Jina:* ${firstName}${lastName}\n` +
+          `• *Username:* ${username ? '@' + username : 'Hakuna'}\n` +
+          `• *Telegram ID:* \`${chatId}\`\n\n` +
+          `🔗 *Kiungo Chako Kikuu:*\n${mainAdminLink}\n\n` +
+          `*Amri Zilizopo:*\n` +
+          `• \`/admins\` - Orodha ya wasimamizi\n` +
+          `• \`/mainadmin\` - Tazama taarifa na kiungo\n` +
+          `• \`/activate <chat_id>\` - Washa msimamizi\n` +
+          `• \`/payment <chat_id>\` - Thibitisha malipo\n` +
+          `• \`/suspend <chat_id>\` - Sitisha msimamizi`;
+
+        await bot.sendMessage(chatId, mainInfoText, { parse_mode: 'Markdown' });
         return;
       }
 

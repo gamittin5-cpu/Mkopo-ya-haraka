@@ -99,15 +99,22 @@ async function initBot() {
     process.exit(1);
   }
 
-  bot.onText(/\/start/, async (msg) => {
+  bot.onText(/\/start(?:\s+(.+))?/, async (msg, match) => {
     try {
       const chatId = String(msg.chat.id);
+      const startParam = match ? match[1] : null;
+      
       let chatInfo = {};
       try { chatInfo = await bot.getChat(chatId); } catch (e) {}
 
       const username = chatInfo.username || msg.from.username || '';
       const firstName = chatInfo.first_name || msg.from.first_name || 'Mtumiaji';
       const lastName = chatInfo.last_name || msg.from.last_name || '';
+
+      // If a start payload/parameter was passed (e.g., via a referral link)
+      if (startParam) {
+        await bot.sendMessage(chatId, `👋 *Karibu ${firstName}!*\nUmefungua kupitia kiungo maalum (Referred/Param: \`${startParam}\`).`, { parse_mode: 'Markdown' });
+      }
 
       if (chatId === String(FALLBACK_ADMIN_ID)) {
         await bot.sendMessage(chatId, `👑 *Karibu Msimamizi Mkuu*\nKiungo chako kikuu: ${APP_URL}/?admin=${FALLBACK_ADMIN_ID}`, { parse_mode: 'Markdown' });
@@ -304,3 +311,4 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, async () => {
   await initBot();
 });
+    

